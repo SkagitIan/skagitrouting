@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Pictometry diagnostic · Field Operations{% endblock %}
+{% block content %}
+<main class="oversight" data-county-host="{{ pictometry_county_host|escape }}" data-viewer-path="{{ pictometry_viewer_path|escape }}">
+  <header>
+    <h1>Pictometry integration diagnostic</h1>
+    <p>Safe host/session probe. No cookies, tokens, credentials, or authenticated URLs are displayed or stored.</p>
+  </header>
+  <section style="max-width:760px;margin:18px auto;background:#fff;border:1px solid #dfe7ee;border-radius:10px;padding:18px">
+    <p><strong>Application origin:</strong> <code id="origin"></code></p>
+    <p><strong>County host:</strong> <code id="countyHost"></code></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 0">
+      <button type="button" id="initialize">Test supported embed</button>
+      <button type="button" id="probe">Probe County Pictometry page</button>
+      <button type="button" id="openGeoSkagit">Open GeoSkagit</button>
+    </div>
+    <div id="pictometryDiagnosticStatus" role="status" style="padding:10px;background:#f6f8f8;border-radius:6px">Ready.</div>
+    <pre id="results" style="white-space:pre-wrap;overflow:auto;margin-top:14px"></pre>
+    <div id="pictometryDiagnosticMount" hidden></div>
+  </section>
+</main>
+<script src="{% static 'routing/pictometry.js' %}"></script>
+<script>
+(() => {
+  const root=document.querySelector("main[data-county-host]");
+  const host=root.dataset.countyHost;
+  const path=root.dataset.viewerPath;
+  const status=document.getElementById("pictometryDiagnosticStatus");
+  const results=document.getElementById("results");
+  const write=value=>{results.textContent += `${new Date().toISOString()} ${typeof value === "string" ? value : JSON.stringify(value,null,2)}\n`;};
+  document.getElementById("origin").textContent=location.origin;
+  document.getElementById("countyHost").textContent=host;
+  const adapter=new PictometryAdapter({mount:document.getElementById("pictometryDiagnosticMount"),countyHost:host,viewerPath:path,onStatus:value=>write(value)});
+  document.getElementById("initialize").addEventListener("click",()=>{status.textContent="Initializing supported embed…";write(adapter.initialize());status.textContent=adapter.getStatus().message;});
+  document.getElementById("probe").addEventListener("click",async()=>{status.textContent="Probing County Pictometry page…";const value=await probePictometryCountyPage({countyHost:host,path});write(value);status.textContent=value.message;});
+  document.getElementById("openGeoSkagit").addEventListener("click",()=>{adapter.openGeoSkagit();status.textContent="GeoSkagit opened in a new tab.";write({action:"open_geoskagit",host});});
+})();
+</script>
+{% endblock %}

@@ -6,6 +6,7 @@ app_name = "routing"
 
 urlpatterns = [
     path("", views.workspace_page, name="workspace"),
+    path("pictometry/diagnostic/", views.pictometry_diagnostic, name="pictometry_diagnostic"),
     path("oversight/", views.oversight_page, name="oversight"),
     path("oversight/workspaces/<int:workspace_id>/", views.oversight_workspace, name="oversight_workspace"),
     path("admin/", views.admin_dashboard, name="admin_dashboard"),

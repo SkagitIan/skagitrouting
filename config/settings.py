@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -70,6 +71,10 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -81,6 +86,8 @@ OPENSKAGIT_API_URL = os.getenv("OPENSKAGIT_API_URL", "").rstrip("/")
 OPENSKAGIT_API_TOKEN = os.getenv("OPENSKAGIT_API_TOKEN", "")
 OPENSKAGIT_API_TIMEOUT = float(os.getenv("OPENSKAGIT_API_TIMEOUT", "12"))
 VALHALLA_URL = os.getenv("VALHALLA_URL", "")
+PICTOMETRY_COUNTY_HOST = os.getenv("PICTOMETRY_COUNTY_HOST", "http://geocorvm1.skagit.local").rstrip("/")
+PICTOMETRY_VIEWER_PATH = os.getenv("PICTOMETRY_VIEWER_PATH", "/Html5ViewerProd/Resources/3rdPartyMaps/Pictometry.aspx")
 CYCLOMEDIA_BASE_URL = os.getenv("CYCLOMEDIA_BASE_URL", "https://atlasapi.cyclomedia.com/api/PanoramaRendering/")
 CYCLOMEDIA_API_KEY = os.getenv("CYCLOMEDIA_API_KEY", "")
 CYCLOMEDIA_USERNAME = os.getenv("CYCLOMEDIA_USERNAME", "")
