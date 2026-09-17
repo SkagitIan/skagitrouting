@@ -39,6 +39,8 @@ header{
 }
 .tab.active{background:var(--os-teal);border-color:var(--os-teal-bright);color:#fff}
 .spacer{flex:1}
+.workspace-admin-link{border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:8px 12px;color:#fff;text-decoration:none;font-weight:700}
+.workspace-admin-link:hover{background:rgba(255,255,255,.1)}
 .btn,.file-label{
   border:1px solid var(--line); background:#fff; color:var(--text); border-radius:7px;
   padding:8px 11px; display:inline-flex; align-items:center; gap:6px
@@ -392,6 +394,7 @@ textarea{
     <button class="tab" data-view="fieldRoutes">Field Routes</button>
   </div>
   <div class="spacer"></div>
+  {% if user.is_staff %}<a class="workspace-admin-link" href="{% url 'routing:admin_dashboard' %}">Admin</a>{% endif %}
 </header>
 
 <div class="statusbar">
@@ -2457,7 +2460,13 @@ document.querySelectorAll(".tab").forEach(btn=>{
     document.querySelector(".statusbar").style.display = v==="routes" ? "flex" : "none";
     if(v==="routes") setTimeout(()=>map.invalidateSize(),50);
     if(v==="preinspection") { renderPreinspection(); refreshRecentSales(); }
-    if(v==="fieldRoutes") { renderFieldRoutes(); setTimeout(()=>fieldRouteMap?.invalidateSize(),50); }
+    if(v==="fieldRoutes") {
+      renderFieldRoutes();
+      setTimeout(()=>{
+        fieldRouteMap?.invalidateSize();
+        renderFieldRouteMap();
+      },50);
+    }
   });
 });
 
