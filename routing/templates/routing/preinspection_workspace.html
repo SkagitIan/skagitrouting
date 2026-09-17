@@ -1,4 +1,3 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -343,32 +342,12 @@ textarea{
 .imagery-compare-head{position:relative;z-index:1000;min-height:42px;padding:7px 10px;border-bottom:1px solid #e1e5e9;display:flex;align-items:center;gap:10px;background:#f7f9fb;font-size:12px}
 .imagery-compare-head span{flex:1;color:var(--muted)}
 .imagery-compare-head button{position:relative;z-index:1001;width:34px;height:34px;border:1px solid var(--os-border);border-radius:8px;background:#fff;color:var(--os-navy);font-size:22px;cursor:pointer;pointer-events:auto}
-.imagery-mode-tabs{display:flex;gap:5px;padding:6px 10px;border-bottom:1px solid #e1e5e9;background:#fff}
-.imagery-mode-tabs button{width:auto;height:auto;padding:5px 9px;border:1px solid var(--os-border);border-radius:5px;background:#fff;color:var(--os-navy);font-size:11px;font-weight:700}
-.imagery-mode-tabs button.active{background:var(--os-teal);border-color:var(--os-teal);color:#fff}
-.imagery-mode-panel{position:relative;display:flex;flex-direction:column;min-height:0;flex:1}
-.imagery-mode-panel[hidden]{display:none}
 .imagery-compare-body{position:relative;display:grid;grid-template-columns:1fr 1fr;min-height:0;flex:1}
 .imagery-pane{position:relative;min-width:0;min-height:0;height:100%;border-right:1px solid #d8dde3}.imagery-pane:last-child{border-right:0}
 .imagery-pane h3{position:absolute;z-index:2;top:8px;left:8px;margin:0;padding:5px 8px;background:rgba(255,255,255,.9);border-radius:5px;font-size:12px}.imagery-map{width:100%;height:100%;min-height:0}
 .imagery-sketch-control{position:absolute;z-index:3;right:8px;top:8px;display:none;align-items:center;gap:5px;flex-wrap:wrap;padding:5px 7px;background:rgba(255,255,255,.94);border:1px solid var(--os-border);border-radius:6px;font-size:11px;max-width:calc(100% - 16px)}
 .imagery-sketch-control.visible{display:flex}
 .imagery-sketch-control input{width:70px}
-.oblique-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid #e1e5e9;background:#f7f9fb;font-size:11px;color:var(--muted)}
-.oblique-controls strong{color:var(--os-navy);margin-right:2px}
-.oblique-controls button{width:auto;height:auto;padding:4px 8px;border:1px solid var(--os-border);border-radius:5px;background:#fff;color:var(--os-navy);font-size:11px;font-weight:700}
-.oblique-controls button.active{background:var(--os-teal);border-color:var(--os-teal);color:#fff}
-.oblique-controls .oblique-help{margin-left:auto}
-.oblique-body{position:relative;display:grid;grid-template-columns:1fr 1fr;min-height:0;flex:1}
-.oblique-pane{position:relative;min-width:0;min-height:0;height:100%;border-right:1px solid #d8dde3;background:#f6f8f8}
-.oblique-pane:last-child{border-right:0}
-.oblique-pane h3{position:absolute;z-index:2;top:8px;left:8px;margin:0;padding:5px 8px;background:rgba(255,255,255,.92);border-radius:5px;font-size:12px}
-.oblique-mount{width:100%;height:100%;min-height:0}
-.oblique-message{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted);font-size:12px;background:rgba(246,248,248,.94)}
-.oblique-message[hidden]{display:none}
-.oblique-actions{position:absolute;z-index:3;right:8px;top:8px;display:flex;gap:4px}
-.oblique-actions button{width:auto;height:auto;padding:4px 7px;border:1px solid var(--os-border);border-radius:5px;background:#fff;color:var(--os-navy);font-size:10px;font-weight:700}
-@media(max-width:700px){.oblique-body{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.oblique-pane{border-right:0;border-bottom:1px solid #d8dde3}.oblique-pane:last-child{border-bottom:0}}
 .imagery-sketch-control button{border:1px solid var(--os-border);border-radius:5px;background:#fff;color:var(--os-navy);padding:4px 6px;font-size:11px;cursor:pointer}.imagery-sketch-control button:hover{background:var(--accent-soft)}
 .imagery-sketch-rail{position:absolute;z-index:10000;left:50%;top:50%;display:none;flex-direction:column;align-items:center;gap:4px;transform:translate(-50%,-50%);padding:6px 5px;background:rgba(255,255,255,.96);border:1px solid var(--os-border);border-radius:9px;box-shadow:0 4px 14px rgba(4,44,83,.22)}
 .imagery-sketch-rail.visible{display:flex}
@@ -406,7 +385,7 @@ textarea{
 
 </style>
 </head>
-<body data-workspace-user-id="{{ request.user.id }}" data-pictometry-county-host="{{ pictometry_county_host|default:'http://geocorvm1.skagit.local'|escape }}" data-pictometry-viewer-path="{{ pictometry_viewer_path|default:'/Html5ViewerProd/Resources/3rdPartyMaps/Pictometry.aspx'|escape }}">
+<body data-workspace-user-id="{{ request.user.id }}">
 <header>
   <a class="brand" href="/routing/" aria-label="Field Operations home"><strong>Field Operations</strong><small>Company workspace</small></a>
   <div class="tabs">
@@ -415,7 +394,7 @@ textarea{
     <button class="tab" data-view="fieldRoutes">Field Routes</button>
   </div>
   <div class="spacer"></div>
-  {% if user.is_staff %}<a class="workspace-admin-link" href="{% url 'routing:admin_dashboard' %}">Admin</a><a class="workspace-admin-link" href="{% url 'routing:pictometry_diagnostic' %}">Pictometry Diagnostic</a>{% endif %}
+  {% if user.is_staff %}<a class="workspace-admin-link" href="{% url 'routing:admin_dashboard' %}">Admin</a>{% endif %}
 </header>
 
 <div class="statusbar">
@@ -572,8 +551,6 @@ textarea{
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="{% static 'routing/pictometry.js' %}"></script>
-
 <script>
 (() => {
 "use strict";
@@ -2044,7 +2021,7 @@ function openImageryCompare(pid){
   const modal=document.createElement("div");
   modal.id="imageryCompare";
   modal.className="imagery-compare";
-  modal.innerHTML=`<div class="imagery-compare-head"><b>${escapeHTML(pid)}</b><div class="imagery-header-actions"><div class="imagery-sketch-control" id="imagerySketchControl"><button type="button" id="sketchToggle">Show sketch</button></div><button type="button" id="imageryClose">×</button></div></div><div class="imagery-notes-bar"><label for="imageryNotes">Notes</label><input id="imageryNotes" type="text" value="${escapeAttr(inspection(pid).notes||"")}" placeholder="Quick observation…" autocomplete="off"></div><nav class="imagery-mode-tabs" aria-label="Aerial imagery mode"><button type="button" class="active" data-imagery-mode="topdown">Top down</button><button type="button" data-imagery-mode="oblique">Oblique</button></nav><section class="imagery-mode-panel" id="imageryTopDownPanel"><div class="imagery-compare-body"><div class="imagery-pane"><h3>Current · 2025</h3><div class="imagery-map" id="imageryCurrent"></div></div><div class="imagery-pane"><h3>Historical · 2019</h3><div class="imagery-map" id="imageryHistoric"></div></div><div class="imagery-sketch-rail" id="imagerySketchRail" aria-label="Sketch alignment tools"><button type="button" data-sketch-action="rotate-left" title="Rotate sketch left 15 degrees">↶</button><button type="button" data-sketch-action="rotate-right" title="Rotate sketch right 15 degrees">↷</button><label>Rotate <input id="sketchRotation" type="range" min="-180" max="180" step="1" value="0"><span class="imagery-sketch-value" id="sketchRotationValue">0°</span></label><button type="button" data-sketch-action="scale-down" title="Make sketch smaller">−</button><button type="button" data-sketch-action="scale-up" title="Make sketch larger">+</button><label>Opacity <input id="sketchOpacity" type="range" min="0.15" max="1" step="0.05" value="0.55"></label><button type="button" data-sketch-action="reset" title="Reset sketch alignment">Reset</button></div></div></section><section class="imagery-mode-panel" id="imageryObliquePanel" hidden><div class="oblique-controls"><strong>Years</strong><button type="button" data-oblique-year="2019">2019</button><button type="button" class="active" data-oblique-year="2025">2025</button><strong>Direction</strong><button type="button" class="active" data-oblique-orientation="N">N</button><button type="button" data-oblique-orientation="E">E</button><button type="button" data-oblique-orientation="S">S</button><button type="button" data-oblique-orientation="W">W</button><span class="oblique-help" id="obliqueStatus" role="status">Loading oblique imagery…</span></div><div class="oblique-body"><section class="oblique-pane"><h3>2019 oblique</h3><div class="oblique-mount" id="obliqueHistoricMount"></div><div class="oblique-message" id="obliqueHistoricMessage">Loading oblique imagery…</div><div class="oblique-actions"><button type="button" data-oblique-open="true">Open GeoSkagit</button></div></section><section class="oblique-pane"><h3>2025 oblique</h3><div class="oblique-mount" id="obliqueCurrentMount"></div><div class="oblique-message" id="obliqueCurrentMessage">Loading oblique imagery…</div><div class="oblique-actions"><button type="button" data-oblique-open="true">Open GeoSkagit</button></div></section></div></section>`;
+  modal.innerHTML=`<div class="imagery-compare-head"><b>${escapeHTML(pid)}</b><div class="imagery-header-actions"><div class="imagery-sketch-control" id="imagerySketchControl"><button type="button" id="sketchToggle">Show sketch</button></div><button type="button" id="imageryClose">×</button></div></div><div class="imagery-notes-bar"><label for="imageryNotes">Notes</label><input id="imageryNotes" type="text" value="${escapeAttr(inspection(pid).notes||"")}" placeholder="Quick observation…" autocomplete="off"></div><div class="imagery-compare-body"><div class="imagery-pane"><h3>Current · 2025</h3><div class="imagery-map" id="imageryCurrent"></div></div><div class="imagery-pane"><h3>Historical · 2019</h3><div class="imagery-map" id="imageryHistoric"></div></div><div class="imagery-sketch-rail" id="imagerySketchRail" aria-label="Sketch alignment tools"><button type="button" data-sketch-action="rotate-left" title="Rotate sketch left 15 degrees">↶</button><button type="button" data-sketch-action="rotate-right" title="Rotate sketch right 15 degrees">↷</button><label>Rotate <input id="sketchRotation" type="range" min="-180" max="180" step="1" value="0"><span class="imagery-sketch-value" id="sketchRotationValue">0°</span></label><button type="button" data-sketch-action="scale-down" title="Make sketch smaller">−</button><button type="button" data-sketch-action="scale-up" title="Make sketch larger">+</button><label>Opacity <input id="sketchOpacity" type="range" min="0.15" max="1" step="0.05" value="0.55"></label><button type="button" data-sketch-action="reset" title="Reset sketch alignment">Reset</button></div></div>`;
   document.body.appendChild(modal);
   const parcelLayer=parcelLayersById.get(pid);
   const parcelCenter=parcelLayer ? parcelLayer.getBounds().getCenter() : null;
@@ -2162,54 +2139,6 @@ function openImageryCompare(pid){
   const aerialLayer=(url,attribution,maxZoom)=>L.tileLayer(url,{tileSize:256,maxZoom,updateWhenZooming:false,keepBuffer:2,attribution});
   const currentAerial=aerialLayer(`${pictometryBase}/PICT-WASKAG25-qSfR3O1lit/default/GoogleMapsCompatible/{z}/{x}/{y}.png`,"Pictometry/Cyclomedia · 2025",22).addTo(current);
   const historicalAerial=aerialLayer("https://geo.skagitcountywa.gov/server/rest/services/Images/SkagitCounty2019_9inch/ImageServer/tile/{z}/{y}/{x}","Skagit County GIS · 2019",21).addTo(historic);
-  const obliqueStatus=document.getElementById("obliqueStatus");
-  const obliqueState={year:2025,orientation:"N"};
-  const obliqueAdapters={
-    2019:new PictometryAdapter({mount:document.getElementById("obliqueHistoricMount"),countyHost:document.body.dataset.pictometryCountyHost,viewerPath:document.body.dataset.pictometryViewerPath,onStatus:value=>{if(value.state!=="ready")document.getElementById("obliqueHistoricMessage").textContent=value.message;}}),
-    2025:new PictometryAdapter({mount:document.getElementById("obliqueCurrentMount"),countyHost:document.body.dataset.pictometryCountyHost,viewerPath:document.body.dataset.pictometryViewerPath,onStatus:value=>{if(value.state!=="ready")document.getElementById("obliqueCurrentMessage").textContent=value.message;}})
-  };
-  const obliqueMessages={2019:document.getElementById("obliqueHistoricMessage"),2025:document.getElementById("obliqueCurrentMessage")};
-  const setObliqueMessage=(year,message,hidden=false)=>{obliqueMessages[year].textContent=message;obliqueMessages[year].hidden=hidden;};
-  const updateOblique=()=>{
-    for(const year of [2019,2025]){
-      const adapter=obliqueAdapters[year];
-      const status=adapter.getStatus();
-      if(status.state!=="ready"){
-        setObliqueMessage(year,status.message || "Pictometry access is unavailable.");
-        continue;
-      }
-      const moved=adapter.setParcel(parcelCenter.lat,parcelCenter.lng,pid);
-      adapter.setOrientation(obliqueState.orientation);
-      adapter.setYear(year);
-      setObliqueMessage(year,moved ? "" : "Pictometry could not target this parcel.",moved);
-    }
-    obliqueStatus.textContent=`${obliqueState.year} · ${obliqueState.orientation} · select a direction or year`;
-  };
-  for(const year of [2019,2025]){
-    const status=obliqueAdapters[year].initialize();
-    if(status.state!=="ready") setObliqueMessage(year,status.message);
-  }
-  document.querySelectorAll("[data-imagery-mode]").forEach(button=>button.addEventListener("click",()=>{
-    const mode=button.dataset.imageryMode;
-    document.querySelectorAll("[data-imagery-mode]").forEach(item=>item.classList.toggle("active",item===button));
-    document.getElementById("imageryTopDownPanel").hidden=mode!=="topdown";
-    document.getElementById("imageryObliquePanel").hidden=mode!=="oblique";
-    if(mode==="oblique"){
-      if(!parcelCenter){obliqueStatus.textContent="Parcel geometry is still loading.";return;}
-      updateOblique();
-    }else requestAnimationFrame(()=>{current.invalidateSize(false);historic.invalidateSize(false);});
-  }));
-  document.querySelectorAll("[data-oblique-year]").forEach(button=>button.addEventListener("click",()=>{
-    obliqueState.year=Number(button.dataset.obliqueYear);
-    document.querySelectorAll("[data-oblique-year]").forEach(item=>item.classList.toggle("active",item===button));
-    updateOblique();
-  }));
-  document.querySelectorAll("[data-oblique-orientation]").forEach(button=>button.addEventListener("click",()=>{
-    obliqueState.orientation=button.dataset.obliqueOrientation;
-    document.querySelectorAll("[data-oblique-orientation]").forEach(item=>item.classList.toggle("active",item===button));
-    updateOblique();
-  }));
-  document.querySelectorAll("[data-oblique-open]").forEach(button=>button.addEventListener("click",()=>obliqueAdapters[2025].openGeoSkagit()));
   requestAnimationFrame(()=>{
     current.invalidateSize(false);
     historic.invalidateSize(false);
@@ -2221,9 +2150,8 @@ function openImageryCompare(pid){
   const close=(options={})=>{
     if(imageryCleanup===close) imageryCleanup=null;
     const notesInput=document.getElementById("imageryNotes");
-     if(notesInput) saveInspectionNotes(pid,notesInput.value);
-     Object.values(obliqueAdapters).forEach(adapter=>adapter.destroy());
-     document.removeEventListener("keydown",onKey);
+    if(notesInput) saveInspectionNotes(pid,notesInput.value);
+    document.removeEventListener("keydown",onKey);
     modal.remove();
     try{current.remove();}catch(e){}
     try{historic.remove();}catch(e){}

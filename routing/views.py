@@ -3,7 +3,6 @@ import hashlib
 import json
 import re
 import requests
-from django.conf import settings
 from PIL import Image, ImageChops
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import redirect_to_login
@@ -64,20 +63,7 @@ def routes_page(request):
 def workspace_page(request):
     if not _workspace_user(request):
         return _forbidden(request)
-    return render(request, "routing/preinspection_workspace.html", {
-        "pictometry_county_host": settings.PICTOMETRY_COUNTY_HOST,
-        "pictometry_viewer_path": settings.PICTOMETRY_VIEWER_PATH,
-    })
-
-
-@require_GET
-def pictometry_diagnostic(request):
-    if not _staff(request):
-        return _forbidden(request)
-    return render(request, "routing/pictometry_diagnostic.html", {
-        "pictometry_county_host": settings.PICTOMETRY_COUNTY_HOST,
-        "pictometry_viewer_path": settings.PICTOMETRY_VIEWER_PATH,
-    })
+    return render(request, "routing/preinspection_workspace.html")
 
 
 def oversight_page(request):

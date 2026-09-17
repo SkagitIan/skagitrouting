@@ -310,20 +310,6 @@ class PreinspectionWorkspaceTests(TestCase):
         self.assertIn('data-workspace-name="${escapeAttr(item.name)}"', template)
         self.assertIn('option.textContent=`${name} · ${(state.assignment||[]).length} parcels`;', template)
 
-    def test_oblique_pictometry_mode_uses_adapter_and_preserves_top_down_mode(self):
-        template = (Path(__file__).parent / "templates" / "routing" / "preinspection_workspace.html").read_text(encoding="utf-8")
-        adapter = (Path(__file__).parents[1] / "static" / "routing" / "pictometry.js").read_text(encoding="utf-8")
-        self.assertIn('data-imagery-mode="oblique"', template)
-        self.assertIn('data-oblique-orientation="N"', template)
-        self.assertIn('data-oblique-year="2019"', template)
-        self.assertIn("new PictometryAdapter", template)
-        self.assertIn("setParcel(parcelCenter.lat,parcelCenter.lng,pid)", template)
-        self.assertIn("function probeCountyPage", adapter)
-        self.assertIn("setLocation", adapter)
-        self.assertIn("setOrientation", adapter)
-        self.assertIn("setYear", adapter)
-        self.assertIn("Open GeoSkagit", template)
-
     def test_cama_print_sheets_preserve_route_orders_and_include_notes_and_field_flags(self):
         template = (Path(__file__).parent / "templates" / "routing" / "preinspection_workspace.html").read_text(encoding="utf-8")
         self.assertIn('id="printCamaRoute"', template)
