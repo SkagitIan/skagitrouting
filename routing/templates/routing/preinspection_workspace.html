@@ -52,12 +52,12 @@ input[type=file]{display:none}
 }
 .view{display:none}
 .view.active{display:block}
-#routesView.active{flex:1;min-height:0}
+#routesView.active{display:flex;flex:1;min-height:0}
 
 /* ROUTE MANAGEMENT */
 .route-layout{
   display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0;
-  height:100%;min-height:0;
+  flex:1;height:auto;min-height:0;
 }
 .field-routes-layout{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:12px;height:calc(100vh - 122px);min-height:520px;padding:12px}
 .field-route-panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;min-height:0;box-shadow:0 5px 18px rgba(4,44,83,.08)}

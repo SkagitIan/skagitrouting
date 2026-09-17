@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Add user · Admin{% endblock %}
+{% block content %}
+<main class="oversight admin-page admin-form-page">
+  <p><a class="admin-link" href="{% url 'routing:admin_dashboard' %}">← All users</a></p>
+  <header><p class="admin-eyebrow">Superuser action</p><h1>Add user</h1><p>This creates a regular account. Staff and superuser access are not granted here.</p></header>
+  <form method="post" class="admin-form">{% csrf_token %}{{ form.as_p }}<div class="admin-form-actions"><a class="admin-link" href="{% url 'routing:admin_dashboard' %}">Cancel</a><button class="admin-primary" type="submit">Create user</button></div></form>
+</main>
+{% endblock %}

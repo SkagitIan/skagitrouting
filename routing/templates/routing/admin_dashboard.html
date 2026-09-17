@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Admin · Field Operations{% endblock %}
+{% block content %}
+<main class="oversight admin-page">
+  <header class="admin-page-head">
+    <div><p class="admin-eyebrow">Staff administration</p><h1>Users</h1><p>Review account status and assignment progress without working as another user.</p></div>
+    {% if user.is_superuser %}<a class="admin-primary" href="{% url 'routing:admin_user_create' %}">Add user</a>{% endif %}
+  </header>
+  <div class="admin-notice">Selecting “View user” opens a read-only progress view. It never switches your session or changes the user’s workspace.</div>
+  <div class="admin-table-wrap">
+    <table>
+      <thead><tr><th>User</th><th>Status</th><th>Workspaces</th><th>Assignment</th><th>Assigned</th><th>Preinspected</th><th></th></tr></thead>
+      <tbody>
+      {% for item in users %}
+        <tr>
+          <td><strong>{{ item.account.get_username }}</strong>{% if item.account.email %}<small>{{ item.account.email }}</small>{% endif %}</td>
+          <td>{% if item.account.is_active %}<span class="admin-status active">Active</span>{% else %}<span class="admin-status">Inactive</span>{% endif %}{% if item.account.is_staff %}<span class="admin-role">Staff</span>{% endif %}</td>
+          <td>{{ item.progress.workspace_count }}</td><td>{{ item.progress.assignment_count }}</td><td>{{ item.progress.assigned_count }}</td><td>{{ item.progress.complete_count }}</td>
+          <td><a class="admin-link" href="{% url 'routing:admin_user_detail' item.account.id %}">Act as (read-only)</a></td>
+        </tr>
+      {% empty %}<tr><td colspan="7">No users found.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+{% endblock %}

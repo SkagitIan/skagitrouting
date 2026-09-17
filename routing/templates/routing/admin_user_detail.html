@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ account.get_username }} · Admin{% endblock %}
+{% block content %}
+<main class="oversight admin-page">
+  <p><a class="admin-link" href="{% url 'routing:admin_dashboard' %}">← All users</a></p>
+  <header class="admin-page-head"><div><p class="admin-eyebrow">Read-only user review</p><h1>{{ account.get_username }}</h1><p>{% if account.get_full_name %}{{ account.get_full_name }} · {% endif %}{{ account.email|default:"No email" }}</p></div><span class="admin-viewing-badge">Viewing as review only</span></header>
+  <section class="admin-metrics">
+    <div><strong>{{ progress.workspace_count }}</strong><span>Workspaces</span></div><div><strong>{{ progress.assignment_count }}</strong><span>Assignment parcels</span></div><div><strong>{{ progress.assigned_count }}</strong><span>Assigned</span></div><div><strong>{{ progress.unassigned_count }}</strong><span>Unassigned</span></div><div><strong>{{ progress.complete_count }}</strong><span>Preinspected</span></div>
+  </section>
+  <h2>Workspace progress</h2>
+  <div class="admin-workspace-grid">
+  {% for workspace in progress.workspaces %}
+    <article class="admin-workspace-card"><div class="admin-workspace-head"><h3>{{ workspace.name }}</h3><span>{{ workspace.year }}</span></div><p>{{ workspace.assignment_count }} parcels · {{ workspace.assigned_count }} assigned · {{ workspace.unassigned_count }} unassigned</p><div class="admin-progress"><span style="width: {{ workspace.completion_percent }}%"></span></div><p class="admin-muted">{{ workspace.complete_count }} preinspected ({{ workspace.completion_percent }}%) · updated {{ workspace.updated_at }}</p><a class="admin-link" href="{% url 'routing:oversight_workspace' workspace.id %}">Review workspace history</a></article>
+  {% empty %}<div class="admin-empty">This user has no saved workspaces yet.</div>{% endfor %}
+  </div>
+</main>
+{% endblock %}

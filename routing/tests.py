@@ -386,3 +386,61 @@ class WorkspaceApiTests(TestCase):
         self.assertTrue(admin_client.login(username="admin", password="test-password"))
         payload = admin_client.get("/routing/api/workspaces/").json()
         self.assertEqual(len(payload["workspaces"]), 1)
+
+    def test_staff_can_review_users_but_regular_users_cannot(self):
+        staff = get_user_model().objects.create_user(username="staff", password="test-password", is_staff=True)
+        staff_client = Client()
+        self.assertTrue(staff_client.login(username="staff", password="test-password"))
+        response = staff_client.get("/routing/admin/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "alice")
+        self.assertNotContains(response, "Add user")
+
+        user_client = Client()
+        self.assertTrue(user_client.login(username="alice", password="test-password"))
+        self.assertEqual(user_client.get("/routing/admin/").status_code, 302)
+
+    def test_only_superusers_can_create_regular_users(self):
+        staff = get_user_model().objects.create_user(username="staff", password="test-password", is_staff=True)
+        staff_client = Client()
+        self.assertTrue(staff_client.login(username="staff", password="test-password"))
+        self.assertEqual(staff_client.get("/routing/admin/users/new/").status_code, 403)
+
+        admin_client = Client()
+        self.assertTrue(admin_client.login(username="admin", password="test-password"))
+        response = admin_client.post(
+            "/routing/admin/users/new/",
+            data={
+                "username": "new-worker",
+                "email": "worker@example.com",
+                "first_name": "New",
+                "last_name": "Worker",
+                "is_active": "on",
+                "password": "new-worker-password",
+            },
+        )
+        self.assertRedirects(response, "/routing/admin/")
+        created = get_user_model().objects.get(username="new-worker")
+        self.assertTrue(created.check_password("new-worker-password"))
+        self.assertTrue(created.is_active)
+        self.assertFalse(created.is_staff)
+        self.assertFalse(created.is_superuser)
+
+    def test_admin_user_detail_reports_read_only_workspace_progress(self):
+        workspace = PreinspectionWorkspace.objects.create(
+            owner=self.alice,
+            created_by=self.alice,
+            name="Alice progress",
+            state={
+                **self.state,
+                "routes": {"Route 1": {"parcels": ["P123"]}},
+            },
+        )
+        admin_client = Client()
+        self.assertTrue(admin_client.login(username="admin", password="test-password"))
+        response = admin_client.get(f"/routing/admin/users/{self.alice.id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Alice progress")
+        self.assertContains(response, "Assignment parcels")
+        self.assertContains(response, "100%")
+        self.assertEqual(PreinspectionWorkspace.objects.get(pk=workspace.id).revision, 1)

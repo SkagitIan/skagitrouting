@@ -4,15 +4,17 @@ import json
 import re
 import requests
 from PIL import Image, ImageChops
+from django.contrib.auth import get_user_model
 from django.contrib.auth.views import redirect_to_login
 from django.core.cache import cache
 from django.db import transaction
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
+from .forms import AdminUserCreationForm
 from .models import AuditEvent, PreinspectionWorkspace, RoutingImport, RoutingImportRow, RoutingPlan, RoutingPlanRevision, RoutingRoute, RoutingStop, RoutingUserSettings
 from .services.exports import route_csv, single_route_csv
 from .services.importers import infer_street_side, normalize_row, read_upload
@@ -84,6 +86,50 @@ def oversight_workspace(request, workspace_id):
     return render(request, "routing/oversight_workspace.html", {"workspace": workspace, "revisions": revisions, "events": events, "summary": _workspace_summary(workspace)})
 
 
+def _user_progress(user):
+    workspaces = [_workspace_summary(workspace) for workspace in user.preinspection_workspaces.all()]
+    assignment_count = sum(item["assignment_count"] for item in workspaces)
+    assigned_count = sum(item["assigned_count"] for item in workspaces)
+    complete_count = sum(item["complete_count"] for item in workspaces)
+    return {
+        "workspaces": workspaces,
+        "workspace_count": len(workspaces),
+        "assignment_count": assignment_count,
+        "assigned_count": assigned_count,
+        "unassigned_count": assignment_count - assigned_count,
+        "complete_count": complete_count,
+    }
+
+
+def admin_dashboard(request):
+    if not _staff(request):
+        return _forbidden(request)
+    users = []
+    for account in get_user_model().objects.prefetch_related("preinspection_workspaces").order_by("username"):
+        users.append({"account": account, "progress": _user_progress(account)})
+    return render(request, "routing/admin_dashboard.html", {"users": users})
+
+
+def admin_user_detail(request, user_id):
+    if not _staff(request):
+        return _forbidden(request)
+    account = get_object_or_404(get_user_model(), pk=user_id)
+    return render(request, "routing/admin_user_detail.html", {"account": account, "progress": _user_progress(account)})
+
+
+@require_http_methods(["GET", "POST"])
+def admin_user_create(request):
+    if not _staff(request):
+        return _forbidden(request)
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Only superusers can create users.")
+    form = AdminUserCreationForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect("routing:admin_dashboard")
+    return render(request, "routing/admin_user_form.html", {"form": form})
+
+
 DEFAULT_WORKSPACE_STATE = {
     "version": 2,
     "year": 2026,
@@ -108,6 +154,14 @@ def _workspace_queryset(request):
 def _workspace_summary(workspace):
     state = workspace.state or {}
     assignment = state.get("assignment") or []
+    assignment_ids = {str(row.get("PARCELID", "")).strip() for row in assignment if isinstance(row, dict) and str(row.get("PARCELID", "")).strip()}
+    assigned_ids = {
+        str(parcel_id).strip()
+        for route in (state.get("routes") or {}).values()
+        if isinstance(route, dict)
+        for parcel_id in (route.get("parcels") or [])
+        if str(parcel_id).strip() in assignment_ids
+    }
     inspections = state.get("inspections") or {}
     complete = sum(
         1
@@ -120,11 +174,15 @@ def _workspace_summary(workspace):
         "name": workspace.name,
         "year": workspace.year,
         "revision": workspace.revision,
+        "assignment_count": len(assignment),
+        "assigned_count": len(assigned_ids),
+        "unassigned_count": max(0, len(assignment_ids) - len(assigned_ids)),
         "created_at": workspace.created_at.isoformat(),
         "updated_at": workspace.updated_at.isoformat(),
         "last_opened_at": workspace.last_opened_at.isoformat() if workspace.last_opened_at else None,
         "parcel_count": len(assignment),
         "complete_count": complete,
+        "completion_percent": round((complete / len(assignment)) * 100) if assignment else 0,
     }
 
 
