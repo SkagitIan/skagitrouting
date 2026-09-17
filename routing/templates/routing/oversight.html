@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block title %}Oversight · Field Operations{% endblock %}{% block content %}
+<main class="oversight"><header><h1>Team oversight</h1><p>Read-only review of worker workspaces and activity.</p></header>
+<table><thead><tr><th>Workspace</th><th>Owner</th><th>Parcels</th><th>Complete</th><th>Updated</th><th></th></tr></thead><tbody>
+{% for item in workspaces %}<tr><td>{{ item.name }}</td><td>{{ item.owner }}</td><td>{{ item.parcel_count }}</td><td>{{ item.complete_count }}</td><td>{{ item.updated_at }}</td><td><a href="{% url 'routing:oversight_workspace' item.id %}">Review</a></td></tr>{% empty %}<tr><td colspan="6">No workspaces yet.</td></tr>{% endfor %}</tbody></table></main>
+{% endblock %}

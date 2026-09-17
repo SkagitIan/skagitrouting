@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environments
+.env
+.venv/
+
+# Django
+db.sqlite3
+staticfiles/
+output/assessor_sync_reports/
+django-runserver-*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# GIS source files downloaded by sync_gis_sources (regenerated on demand).
+# The gis_sources.yaml config under data/gis/sources/ IS tracked.
+data/gis/raw/
+data/gis/extracted/
+
+# Generated feature exports (regenerate with export_geo_features_parquet).
+data/processed/
+
+# Generated dataset/report artifacts (regenerate with build_sfr_sales_model_dataset
+# and run_sfr_baseline_ratio_study).
+data/reports/
+
+# Large raw data dumps (not needed at runtime; regenerate static/data/*.geojson from these)
+data/*.zip
+data/*.har
+data/*.xlsx
+data/10yr_levy_mapping.csv
+data/2025schedule01.csv
+data/discovery_probes (1).json
+data/skagit_agency_json_builder.ipynb
+
+# Local one-off notebooks/scripts and design exports
+data/downloadassessor.py
+data/inspect_schema.py
+data/parse_har.py
+data/skagit_tax_load.py
+7422a400-f244-47c2-a473-52b7e6e0df45.png
+OpenSkagit civic data platform branding - Claude.html
+TASKS.md
+
+.env.local
+.cache/

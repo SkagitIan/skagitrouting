@@ -1,0 +1,12 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"config/urls.py" = ["E303", "F841"]
+"openskagit_tools/management/commands/approve_mcp_access.py" = ["F541"]
+"openskagit_tools/tests.py" = ["E402"]

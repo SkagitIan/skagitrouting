@@ -1,0 +1,8 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">OpenSkagit Parcel Field Map</title>
+  <desc id="desc">A location marker over parcel boundaries.</desc>
+  <rect width="512" height="512" rx="96" fill="#173f3a"/>
+  <path d="M64 104h154v132H64zm166 0h218v132H230zM64 248h118v160H64zm130 0h254v160H194z" fill="#d9e3df" stroke="#56b89b" stroke-width="12"/>
+  <path d="M256 88c-70 0-126 56-126 126 0 99 126 222 126 222s126-123 126-222c0-70-56-126-126-126z" fill="#ef9f2f" stroke="#fff" stroke-width="18"/>
+  <circle cx="256" cy="214" r="48" fill="#173f3a" stroke="#fff" stroke-width="12"/>
+</svg>

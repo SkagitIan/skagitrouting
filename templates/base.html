@@ -1,0 +1,14 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Field Operations{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'product.css' %}">
+  <link rel="stylesheet" href="{% static 'oversight.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <nav class="product-nav"><a class="product-brand" href="/routing/">Field Operations</a><span class="product-nav-spacer"></span>{% if user.is_authenticated %}<span>{{ user.get_username }}</span>{% if user.is_staff %}<a href="{% url 'routing:oversight' %}">Oversight</a><a href="/admin/">Admin</a>{% endif %}<a href="{% url 'logout' %}">Sign out</a>{% endif %}</nav>
+  {% block content %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,2775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field Operations Workspace</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.css">
+
+<style>
+:root{
+  --os-navy:#042C53; --os-current:#0A2E38; --os-teal:#00828A; --os-teal-bright:#1AACB0;
+  --os-green:#7DB61C; --os-blue:#0071BC; --os-gold:#FDB913; --os-slate:#3D4D5C;
+  --os-ink:#1f2937; --os-muted:#617082; --os-border:#dfe7ee; --os-surface:#fff; --os-soft:#f6f8f8;
+  --bg:var(--os-soft); --panel:var(--os-surface); --text:var(--os-ink); --muted:var(--os-muted); --line:var(--os-border);
+  --accent:var(--os-teal); --accent-soft:#e4f4f4; --green:#eaf5dc; --green-text:#416900;
+  --amber:#fff3d6; --amber-text:#8a5a00; --red:#fde7e7; --red-text:#9b1c1c;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;font-family:Inter,Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+header{
+  background:var(--os-navy); border-bottom:1px solid #0b426e; padding:10px 16px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none;margin-right:10px}
+.brand img{width:30px;height:30px;object-fit:contain}
+.brand strong{font-family:"DM Sans",Inter,sans-serif;font-size:18px;line-height:1}
+.brand small{color:#b9d5e8;font-size:11px;margin-left:2px}
+.tabs{display:flex;gap:6px}
+.tab{
+  border:1px solid rgba(255,255,255,.26); background:transparent; border-radius:8px; padding:8px 12px; color:#d7e7f1
+}
+.tab.active{background:var(--os-teal);border-color:var(--os-teal-bright);color:#fff}
+.spacer{flex:1}
+.btn,.file-label{
+  border:1px solid var(--line); background:#fff; color:var(--text); border-radius:7px;
+  padding:8px 11px; display:inline-flex; align-items:center; gap:6px
+}
+.btn.primary,.file-label.primary{background:var(--os-teal);border-color:var(--os-teal);color:#fff}
+.btn.danger{color:var(--red-text)}
+input[type=file]{display:none}
+.statusbar{
+  background:#fff;border-bottom:1px solid var(--line);padding:8px 16px;
+  display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)
+}
+.view{display:none}
+.view.active{display:block}
+#routesView.active{flex:1;min-height:0}
+
+/* ROUTE MANAGEMENT */
+.route-layout{
+  display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0;
+  height:100%;min-height:0;
+}
+.field-routes-layout{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:12px;height:calc(100vh - 122px);min-height:520px;padding:12px}
+.field-route-panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;min-height:0;box-shadow:0 5px 18px rgba(4,44,83,.08)}
+.field-route-panel h2{margin:0;color:var(--os-navy);font-size:18px}.field-route-panel .help{margin:4px 0 12px}
+.field-route-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:10px}.field-route-controls input,.field-route-controls select{min-width:0;border:1px solid var(--line);border-radius:6px;padding:7px 8px;background:#fff}.field-route-controls button{border:1px solid #9bcfe8;background:#e0f3ff;color:#165d82;border-radius:6px;padding:7px 10px;font-weight:700;cursor:pointer}
+.field-route-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.field-route-actions button{border:1px solid var(--line);background:#f7f9fb;border-radius:6px;padding:7px 9px;color:var(--os-navy);font-weight:700;cursor:pointer}.field-route-actions button.primary{background:#dff1e8;border-color:#a7d1b7;color:#1f633e}
+.field-route-status{font-size:11px;color:var(--muted);min-height:18px;margin-bottom:8px}.field-route-list{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:8px}.field-route-column{border:1px solid var(--line);border-radius:7px;padding:7px;background:#fff}.field-route-column.is-active{border-color:#8fc4d7;box-shadow:inset 0 0 0 1px #dff3fa}.field-route-column-head{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;color:var(--os-navy);font-size:12px}.field-route-column-head span{color:var(--muted);font-size:10px}.field-route-drop{min-height:10px;display:flex;flex-direction:column;gap:5px;border-radius:5px}.field-route-drop.is-drop-target{background:#edf9f2;outline:1px dashed #2f8c72}.field-route-list.empty{border:1px dashed var(--line);border-radius:7px;padding:14px;color:var(--muted);font-size:12px}
+.field-stop{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:7px;border:1px solid #dce5eb;border-radius:7px;background:#fbfdff;padding:7px;cursor:grab}.field-stop:active{cursor:grabbing}.field-stop.is-dragging{opacity:.45}.field-stop.is-drop-target{border-color:#2f8c72;background:#edf9f2}.field-stop-number{width:25px;height:25px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#e0f3ff;color:#165d82;font:700 12px JetBrains Mono,monospace}.field-stop-main{min-width:0}.field-stop-main b{display:block;color:var(--os-navy);font:700 12px JetBrains Mono,monospace}.field-stop-main span{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.field-stop-remove{border:0;background:transparent;color:#a5222b;font-size:16px;cursor:pointer;padding:2px 4px}.field-route-map{min-height:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 5px 18px rgba(4,44,83,.08)}
+.field-unassigned-heading{font-size:11px;color:var(--muted);font-weight:700;margin:8px 2px 2px}.field-stop.unassigned{background:#fffaf0;border-style:dashed}.field-stop-marker{background:transparent;border:0}.field-stop-marker span{display:flex;width:27px;height:27px;align-items:center;justify-content:center;border-radius:50%;background:#165d82;color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);font:700 11px JetBrains Mono,monospace}
+@media(max-width:900px){.field-routes-layout{grid-template-columns:1fr;height:auto}.field-route-map{height:58vh;min-height:420px}}
+#map{height:100%;min-height:0;background:#dde5ea}
+.side{
+  background:#fff;border-left:1px solid var(--line);padding:14px;overflow:auto
+}
+.side h2{font-size:16px;margin:0 0 8px}
+.side h3{font-size:13px;margin:18px 0 8px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
+.help{font-size:13px;color:var(--muted);line-height:1.45}
+.field{margin:10px 0}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.field input,.field select{
+  width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 9px;background:#fff
+}
+.selection-box{
+  border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:12px;background:#fafbfc
+}
+.big{font-size:24px;font-weight:700}
+.route-list{display:flex;flex-direction:column;gap:6px}
+.route-row{
+  display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;
+  border:1px solid var(--line);border-radius:7px;padding:7px 8px;font-size:13px
+}
+.route-swatch{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:6px}
+.mini{border:1px solid var(--line);background:#fff;border-radius:5px;padding:4px 6px;font-size:12px}
+.warn{background:var(--amber);color:var(--amber-text);padding:8px;border-radius:6px;font-size:12px;margin-top:8px}
+.ok{background:var(--green);color:var(--green-text);padding:8px;border-radius:6px;font-size:12px;margin-top:8px}
+
+/* PREINSPECTION */
+.pre-wrap{padding:12px 16px 30px}
+.pre-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.pre-toolbar select,.pre-toolbar input{
+  border:1px solid var(--line);border-radius:6px;padding:8px 9px;background:#fff
+}
+.pre-search-control{position:relative;display:flex;align-items:center}
+.pre-search-toggle,.pre-print-button{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--os-navy);cursor:pointer}
+.pre-search-toggle:hover,.pre-print-button:hover{background:#eaf4f8;border-color:#8eb0c7}
+.pre-search-toggle .ui-icon,.pre-print-button .ui-icon{width:17px;height:17px}
+.pre-search-popover{position:absolute;z-index:20;top:calc(100% + 6px);right:0;width:min(330px,calc(100vw - 30px));padding:7px;background:#fff;border:1px solid var(--os-border);border-radius:7px;box-shadow:0 8px 22px rgba(4,44,83,.2)}
+.pre-search-popover[hidden]{display:none}
+.pre-search-popover input{width:100%;box-sizing:border-box;padding:7px 8px}
+.pre-search-suggestions{max-height:260px;overflow:auto;margin-top:5px}
+.pre-search-suggestion{display:block;width:100%;padding:7px 8px;border:0;border-radius:5px;background:#fff;color:var(--os-ink);text-align:left;cursor:pointer;font-size:11px}
+.pre-search-suggestion:hover,.pre-search-suggestion:focus-visible{background:#eaf4f8;outline:none}
+.pre-search-suggestion b{display:block;color:var(--os-navy);font-family:JetBrains Mono,monospace;font-size:11px}
+.pre-search-suggestion span{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pre-search-empty{padding:8px;color:var(--muted);font-size:11px}
+.pre-view-toggle{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--line);border-radius:7px;background:#f5f8fa}
+.pre-view-button{border:0;border-radius:5px;background:transparent;color:var(--muted);padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer}
+.pre-view-button:hover{background:#eaf4f8;color:var(--os-navy)}
+.pre-view-button[aria-pressed="true"]{background:var(--os-navy);color:#fff;box-shadow:0 1px 2px rgba(4,44,83,.16)}
+.workspace-controls{display:flex;align-items:center;gap:5px;flex:0 1 auto;min-width:0;padding:5px 7px;border:1px solid #d9e6ee;border-radius:8px;background:#f7fbfd}.workspace-selector-label{font-size:11px;font-weight:800;color:var(--os-navy);white-space:nowrap}.workspace-controls select{min-width:180px;max-width:260px;height:32px;padding:5px 7px}.workspace-button{display:inline-flex;align-items:center;gap:4px;height:32px;border:1px solid #9bcfe8;border-radius:6px;background:#e0f3ff;color:#165d82;font-size:11px;font-weight:800;padding:0 8px;cursor:pointer}.workspace-button:hover{background:#d1eefb}.workspace-save-status{margin-left:auto;color:var(--muted);font-size:11px;white-space:nowrap}.workspace-save-status.is-error{color:#a5222b;font-weight:700}.workspace-save-status.is-saved{color:#2f7b53}.tool-icon{display:inline-flex;width:15px;height:15px;align-items:center;justify-content:center}.tool-icon svg,.ui-icon{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.pre-filter-group{display:flex;align-items:center;gap:6px;min-width:0}.pre-search-wrap{position:relative;display:flex;align-items:center}.pre-search-wrap .ui-icon{position:absolute;left:9px;color:var(--muted);pointer-events:none}.pre-search-wrap input{padding-left:31px}.pre-tool-status{display:flex;align-items:center;gap:5px;margin-left:auto;white-space:nowrap}
+.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:960px}
+th{
+  position:sticky;top:0;background:#eef2f6;padding:8px 7px;border-bottom:1px solid var(--line);
+  font-size:12px;text-transform:uppercase;text-align:center;z-index:2
+}
+th.left{text-align:left}
+td{padding:5px 7px;border-bottom:1px solid #edf0f3;font-size:13px}
+tr.complete{background:#f5fbf6}
+tr.changed{background:#fffaf0}
+.toggle{
+  min-width:34px;height:30px;border:1px solid #cfd6dd;background:#fff;border-radius:6px;font-weight:700
+}
+.toggle.on{background:var(--accent-soft);border-color:#8eb0c7;color:#174968}
+.change-group{display:flex;gap:4px;justify-content:center}
+.change-btn{
+  width:42px;height:30px;border:1px solid #cfd6dd;background:#fff;border-radius:6px;font-size:12px;font-weight:700
+}
+.change-btn.yes.on{background:var(--amber);color:var(--amber-text);border-color:#e4c66f}
+.change-btn.no.on{background:var(--green);color:var(--green-text);border-color:#9fc9aa}
+.preinspection-table tbody tr:nth-child(even) td{background:#fbfdff}
+.preinspection-table tbody tr.complete td{background:#f5fbf6}
+.preinspection-table tbody tr.changed td{background:#fffaf0}
+.preinspection-table tbody tr{transition:opacity .16s ease,filter .16s ease,box-shadow .16s ease}
+.preinspection-table tbody tr.complete:not(.active-parcel){opacity:.45}
+.preinspection-table tbody tr.active-parcel{opacity:1;filter:none}
+.preinspection-table tbody tr.active-parcel td{background:#fff4c2 !important;box-shadow:inset 0 1px 0 rgba(230,167,0,.18),inset 0 -1px 0 rgba(230,167,0,.18)}
+.preinspection-table tbody tr.active-parcel td:first-child{border-left:6px solid #e6a700;padding-left:8px}
+.preinspection-table tbody tr.active-parcel .parcel-hover b,
+.preinspection-table tbody tr.active-parcel .address-copy{font-weight:800;color:var(--os-navy)}
+.preinspection-table tbody tr.row-pulse td{animation:activeParcelPulse .75s ease-out}
+@keyframes activeParcelPulse{0%{box-shadow:inset 0 0 0 999px rgba(230,167,0,.32)}100%{box-shadow:inset 0 1px 0 rgba(230,167,0,.18),inset 0 -1px 0 rgba(230,167,0,.18)}}
+.preinspection-action{box-shadow:0 1px 2px rgba(4,44,83,.08)}
+.parcel-link{background:#e0f3ff;border-color:#9bcfe8;color:#165d82}
+.photo-action{background:#fff0f6;border-color:#e5b4c8;color:#8a3e61}
+.photo-action:hover{background:#fbdce9;border-color:#c984a2}
+.aerial-action{background:#edf8e6;border-color:#acd08e;color:#416900}
+.aerial-action:hover{background:#dff0d2;border-color:#82ad5d}
+.listing-action{background:#fff4d6;border-color:#e4c66f;color:#8a5a00}
+.listing-action:hover{background:#ffebad;border-color:#c89f35}
+.changes-action.yes{background:repeating-linear-gradient(135deg,#fff 0,#fff 7px,#f0f2f4 7px,#f0f2f4 9px);border-color:#cfd6dd;color:#4b5964}
+.changes-action.no{background:repeating-linear-gradient(45deg,#fff 0,#fff 7px,#f0f2f4 7px,#f0f2f4 9px);border-color:#cfd6dd;color:#4b5964}
+.changes-action.yes.on{background:var(--amber);border-color:#e4c66f;color:var(--amber-text)}
+.changes-action.no.on{background:var(--green);border-color:#9fc9aa;color:var(--green-text)}
+.notes-cell{display:flex;align-items:center;gap:6px;min-width:290px}
+.notes-cell textarea{flex:1;min-width:0}
+.preinspection-table.cards-mode{display:block;min-width:0}
+.preinspection-table.cards-mode thead{display:none}
+.preinspection-table.cards-mode tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:10px;padding:10px;background:#f7f9fb}
+.preinspection-table.cards-mode tbody tr{display:block;min-width:0;border:0}
+.preinspection-table.cards-mode tbody tr td{display:block;padding:0;border:0;background:transparent !important}
+.preinspection-table.cards-mode tbody tr.complete:not(.active-parcel){opacity:.58}
+.preinspection-card{display:flex;flex-direction:column;gap:8px;min-height:200px;padding:11px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 2px 7px rgba(4,44,83,.08)}
+.preinspection-card-header{display:flex;align-items:center;gap:5px;min-width:0;color:var(--os-navy)}
+.preinspection-card-header b{font-size:14px;overflow-wrap:anywhere}
+.preinspection-card-header .parcel-link{margin-left:auto;flex:0 0 auto}
+.preinspection-card-address{min-height:34px;color:var(--muted);font-size:12px}
+.preinspection-card-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:2px;border-top:1px solid #edf0f3}
+.preinspection-card-tools button{flex:0 0 32px;width:32px;height:30px}
+.preinspection-card-tools .listing-cell{display:block}
+.preinspection-card-decision{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.preinspection-card-decision-label{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
+.preinspection-card-notes{display:flex;align-items:flex-start;gap:6px;margin-top:auto}
+.preinspection-card-notes textarea{width:100%;min-width:0;min-height:46px}
+.preinspection-table.cards-mode tbody tr.active-parcel .preinspection-card{border-color:#e6a700;background:#fff4c2;box-shadow:0 0 0 2px rgba(230,167,0,.18),0 3px 10px rgba(230,167,0,.16)}
+.preinspection-table.cards-mode tbody tr.row-pulse .preinspection-card{animation:activeParcelPulse .75s ease-out}
+.preinspection-table.cards-mode tbody tr.empty-row{grid-column:1 / -1}
+.preinspection-table.cards-mode tbody tr.empty-row td{padding:35px;background:#fff !important}
+.address-copy{display:inline-block;max-width:100%;padding:2px 4px;border:1px solid transparent;border-radius:5px;background:transparent;color:inherit;text-align:left;line-height:1.35;cursor:pointer}
+.address-copy:hover,.address-copy:focus-visible{border-color:#9bcfe8;background:#e0f3ff;color:#165d82;outline:none}
+.address-copy.is-copied{border-color:#9fc9aa;background:#eff9e9;color:#416900}
+.unassign-action{flex:0 0 30px;width:30px;height:30px;border:1px solid #e7b0b0;border-radius:6px;background:#fff3f3;color:#a5222b;font-size:15px;line-height:1}
+.unassign-action:hover{background:#fbe0e0;border-color:#c95858}
+.recent-sale-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:4px;border-radius:50%;background:#c62828;color:#fff;font-size:12px;font-weight:800;line-height:1;vertical-align:middle;box-shadow:0 1px 2px rgba(120,0,0,.2)}
+.recent-sale-route-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c62828;color:#fff;font-size:11px;font-weight:800;line-height:1;vertical-align:middle;box-shadow:0 1px 2px rgba(120,0,0,.2)}
+.sales-check-status{display:inline-flex;align-items:center;max-width:320px;margin-left:8px;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sales-check-status.is-error{color:#9b1c1c}
+.sales-check-status.is-success{color:#416900}
+.preinspection-table tbody tr:not(.active-parcel) .preinspection-action,
+.preinspection-table tbody tr:not(.active-parcel) .parcel-link,
+.preinspection-table tbody tr:not(.active-parcel) .google-search-btn,
+.preinspection-table tbody tr:not(.active-parcel) .changes-action,
+.preinspection-table tbody tr:not(.active-parcel) .unassign-action{background:#f6f7f8;border-color:#d8dde3;color:#6a747c;box-shadow:none}
+.preinspection-table tbody tr:not(.active-parcel) .changes-action.on{font-weight:800}
+.preinspection-table tbody tr:not(.active-parcel) .recent-sale-badge{opacity:.7}
+.preinspection-table tbody tr:not(.active-parcel) .photo-action{background:#e6f1fb;border-color:#9fc4e4;color:var(--os-blue)}
+.preinspection-table tbody tr:not(.active-parcel) .aerial-action{background:#eaf5dc;border-color:#acd08e;color:#416900}
+.preinspection-table tbody tr:not(.active-parcel) .listing-action{background:#fff4d6;border-color:#e4c66f;color:#8a5a00}
+.imagery-header-actions{display:flex;align-items:center;gap:5px;margin-left:auto}
+.imagery-compare-head .imagery-sketch-control{position:static;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:0;background:transparent;border:0;max-width:none;font-size:11px}
+.imagery-compare-head .imagery-sketch-control button{width:auto;height:30px;padding:4px 7px;font-size:12px}
+.imagery-compare-head .imagery-sketch-control input{width:54px}
+.imagery-notes-bar{display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid #e1e5e9;background:#fffdf3;font-size:11px;color:var(--muted)}
+.imagery-notes-bar label{font-weight:700;color:var(--os-navy);white-space:nowrap}
+.imagery-notes-bar input{flex:1;min-width:0;border:1px solid #e7dfb8;border-radius:5px;padding:5px 7px;background:#fff;font-size:12px}
+textarea{
+  width:100%;min-width:250px;min-height:30px;height:30px;resize:vertical;
+  border:1px solid #d8dde3;border-radius:5px;padding:5px 7px
+}
+.empty{padding:35px;text-align:center;color:var(--muted)}
+.pill{display:inline-block;padding:2px 7px;background:#eef2f6;border-radius:999px;font-size:12px}
+
+/* Leaflet */
+.leaflet-popup-pane{z-index:9000}
+.leaflet-popup-content-wrapper{border-radius:7px;box-shadow:0 10px 28px rgba(4,44,83,.22)}
+.leaflet-popup-content{font-size:12px;margin:8px 10px;min-width:190px;max-width:240px;overflow:visible}
+.leaflet-popup-content table{min-width:0;width:100%;table-layout:auto}
+.legend{
+  background:#fff;border:1px solid #ccd4dc;border-radius:6px;padding:7px 9px;font-size:12px;line-height:1.6
+}
+.legend i{width:11px;height:11px;display:inline-block;margin-right:6px;border-radius:2px}
+
+@media(max-width:900px){
+  .route-layout{grid-template-columns:1fr}
+  .side{border-left:0;border-top:1px solid var(--line)}
+  #map{height:560px}
+}
+
+.step-card{
+  display:flex; gap:10px; border:1px solid var(--line); border-radius:9px;
+  padding:10px; margin:10px 0; background:#fbfcfd;
+}
+.step-number{
+  flex:0 0 28px; width:28px; height:28px; border-radius:50%;
+  background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:14px;
+}
+.step-content{min-width:0;flex:1}
+.step-action{margin-top:8px;width:100%;justify-content:center}
+.draw-route-btn{
+  width:100%; margin-top:8px; border:2px solid #8b5a00; border-radius:8px;
+  padding:11px 12px; background:#ffd15a; color:#4f3600; font-weight:800;
+  letter-spacing:.02em;
+}
+.draw-route-btn:hover{background:#ffc936}
+.draw-route-btn:disabled{opacity:.45;cursor:not-allowed}
+.workspace-actions{display:grid;gap:6px}
+.workspace-actions .btn,.workspace-actions .file-label{width:100%;justify-content:center}
+.pre-toolbar.simple{
+  padding:2px 0 10px; margin:0; gap:7px; border:0; background:transparent;
+}
+.pre-toolbar.simple select,.pre-toolbar.simple input{height:36px}
+.leaflet-pm-toolbar .leaflet-buttons-control-button,
+.leaflet-control-container a.leaflet-control-button{
+  border:2px solid #5c4300 !important;
+  background-color:#ffd15a !important;
+}
+
+
+.popup-actions{margin-top:6px;display:grid;gap:5px}
+.popup-data{width:100%;min-width:0;border-collapse:collapse;border-spacing:0;margin:0 0 2px;font-size:11px;line-height:1.25;table-layout:fixed}
+.popup-data th,.popup-data td{position:static;top:auto;z-index:auto;padding:2px 4px;border:0;border-bottom:1px solid #edf0f3;background:transparent;text-align:left;font-size:11px;text-transform:none;white-space:normal;vertical-align:top}
+.popup-data th{width:38%;color:var(--os-muted);font-weight:600}
+.popup-data td{color:var(--os-ink);font-weight:600;overflow-wrap:anywhere}
+.popup-route-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px}
+.popup-route-row select{min-width:0;border:1px solid var(--os-border);border-radius:5px;padding:5px;font-size:11px;background:#fff}
+.popup-move{
+  width:100%;border:1px solid #1f5f8b;background:#1f5f8b;color:#fff;
+  border-radius:5px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer
+}
+.popup-move:hover{background:#174968}
+.popup-unassign{
+  width:100%;border:1px solid #d8dde3;background:#fff;color:#7a1f1f;
+  border-radius:5px;padding:5px 8px;font-size:11px;cursor:pointer
+}
+.popup-remove{
+  width:100%;border:1px solid #b61b27;background:#fff;color:#9b1c1c;
+  border-radius:5px;padding:5px 8px;font-size:11px;cursor:pointer
+}
+.listing-cell{display:flex;align-items:center;justify-content:center;gap:6px}
+.google-search-btn{
+  width:28px;height:28px;padding:0;border-radius:6px;background:#fff;color:#174968;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid #9aa8b5
+}
+.google-search-btn:hover{background:#eaf4f8;border-color:#5f829b}
+.google-search-modal{position:fixed;inset:2vh 2vw;z-index:99999;display:flex;flex-direction:column;background:#fff;border:1px solid var(--os-border);border-radius:9px;box-shadow:0 18px 45px rgba(4,44,83,.28);overflow:hidden}
+.google-search-head{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);background:#f7f9fb;color:var(--os-navy)}
+.google-search-head strong{white-space:nowrap}.google-search-form{display:flex;flex:1;gap:6px;min-width:0}.google-search-form input{flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:6px}.google-search-form button,.google-search-close{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:#fff;color:var(--os-navy);font-weight:700;cursor:pointer}.google-search-form button{background:var(--os-teal);border-color:var(--os-teal);color:#fff}.google-search-close{font-size:19px;line-height:20px}.google-search-frame{width:100%;height:100%;min-height:0;flex:1;border:0;background:#fff}
+.parcel-link{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid #9aa8b5;border-radius:5px;color:#1f5f8b;text-decoration:none;font-weight:800}
+.parcel-link:hover{background:#e7f0f7;border-color:#5f829b}
+
+
+.route-tools{
+  border:1px solid var(--line);border-radius:8px;padding:9px;margin:7px 0 10px;background:#fff
+}
+.route-tools-head{display:flex;flex-direction:column;gap:1px;margin-bottom:7px}
+.route-name-row{display:grid;grid-template-columns:1fr auto;gap:5px}
+.route-name-row input{min-width:0;border:1px solid var(--line);border-radius:6px;padding:7px 8px}
+.route-name-row .draw-route-btn{width:auto;margin:0;padding:7px 10px;white-space:nowrap}
+.selection-compact{
+  display:flex;justify-content:space-between;align-items:center;gap:7px;
+  margin-top:7px;padding-top:7px;border-top:1px solid #edf0f3
+}
+.selection-number{font-size:18px;font-weight:700}
+.selection-actions{display:flex;gap:4px}
+.selection-actions .btn{padding:5px 9px}
+.workspace-details{margin-top:9px;border-top:1px solid var(--line);padding-top:7px}
+.workspace-details summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:700}
+.workspace-details .workspace-actions{margin-top:6px}
+.routing-settings-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(4,44,83,.42)}.routing-settings-card{width:min(520px,96vw);background:#fff;border:1px solid var(--os-border);border-radius:10px;box-shadow:0 18px 45px rgba(4,44,83,.28);overflow:hidden}.routing-settings-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#f7f9fb;color:var(--os-navy)}.routing-settings-head b{margin-right:auto}.routing-settings-head button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--os-navy);font-size:18px;line-height:20px;padding:3px 8px;cursor:pointer}.routing-settings-body{padding:14px}.routing-settings-body label{display:block;margin-bottom:5px;color:var(--os-navy);font-size:12px;font-weight:700}.routing-settings-body input{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 9px}.routing-settings-body p{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.4}.routing-settings-foot{display:flex;justify-content:flex-end;gap:7px;padding:10px 14px;border-top:1px solid var(--line);background:#fbfcfd}.routing-settings-foot button{border:1px solid var(--line);border-radius:6px;padding:7px 11px;background:#fff;color:var(--os-navy);font-weight:700;cursor:pointer}.routing-settings-foot button.primary{background:var(--os-teal);border-color:var(--os-teal);color:#fff}
+.route-name-target{cursor:pointer}
+.route-name-target:hover b{text-decoration:underline}
+.progress-pill{background:#e7f0f7;color:#174968;font-weight:700}
+.field-pill{background:#fff1cc;color:#805200;font-weight:700}
+.photo-btn{
+  width:30px;height:30px;border-radius:6px;border:1px solid #9aa8b5;background:#fff;
+  color:#36566f;font-size:16px;font-weight:700;cursor:pointer
+}
+.photo-btn:hover{background:#e7f0f7;border-color:#5f829b}
+.streetsmart-compare{position:fixed;inset:1vh 1vw;z-index:99998;background:#fff;border:1px solid var(--os-border);border-radius:8px;box-shadow:0 18px 45px rgba(4,44,83,.25);overflow:hidden;display:flex;flex-direction:column}
+.streetsmart-head{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #e1e5e9;background:#f7f9fb;color:var(--os-navy);font-size:12px}.streetsmart-head b{margin-right:auto}.streetsmart-head button{border:1px solid var(--os-border);border-radius:6px;background:#fff;color:var(--os-navy);padding:6px 8px;font-size:11px;cursor:pointer}.streetsmart-head button:disabled{opacity:.45;cursor:not-allowed}.streetsmart-head button.primary{background:var(--os-teal);border-color:var(--os-teal);color:#fff}.streetsmart-head button.close{font-size:18px;line-height:18px;padding:4px 8px}.streetsmart-step-group{display:flex;align-items:center;gap:3px}.streetsmart-step-group button{padding-left:6px;padding-right:6px}.streetsmart-step-count{min-width:76px;text-align:center;color:var(--muted);font-size:10px}
+.streetsmart-meta{display:flex;align-items:center;gap:10px;min-height:28px;padding:4px 10px;border-bottom:1px solid #e1e5e9;background:#fffdf3;color:var(--muted);font-size:11px}.streetsmart-status{margin-left:auto;text-align:right}.streetsmart-notes{display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid #e1e5e9;background:#fffdf3;font-size:11px;color:var(--muted)}.streetsmart-notes label{font-weight:700;color:var(--os-navy);white-space:nowrap}.streetsmart-notes input{flex:1;min-width:0;border:1px solid #e7dfb8;border-radius:5px;padding:5px 7px;background:#fff;font-size:12px}
+.streetsmart-body{display:grid;grid-template-columns:1fr 1fr;min-height:0;flex:1}.streetsmart-pane{position:relative;min-width:0;min-height:0;height:100%;border-right:1px solid #d8dde3;background:#eef2f5;display:flex;flex-direction:column}.streetsmart-pane:last-child{border-right:0}.streetsmart-pane h3{margin:0;padding:8px 10px;background:#f7f9fb;border-bottom:1px solid #d8dde3;color:var(--os-navy);font-size:12px}.streetsmart-image-wrap{position:relative;min-height:0;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden}.streetsmart-pane img{max-width:100%;max-height:100%;object-fit:contain;display:block}.streetsmart-viewer-mount{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}.streetsmart-viewer-mount>div{width:100%!important;height:100%!important}.streetsmart-placeholder{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;padding:22px;background:#eef2f5;color:var(--muted);font-size:12px;text-align:center;line-height:1.5}.streetsmart-loading{opacity:.65}.streetsmart-view-group{display:flex;align-items:center;gap:3px}.streetsmart-view-group button{padding-left:6px;padding-right:6px}.streetsmart-view-label{min-width:62px;text-align:center;color:var(--muted);font-size:10px}
+.streetsmart-placeholder[hidden]{display:none!important}
+.streetsmart-loading-indicator{position:absolute;z-index:2;top:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #b8cbd6;border-radius:999px;background:rgba(255,255,255,.94);box-shadow:0 3px 10px rgba(4,44,83,.16);color:var(--os-navy);font-size:11px;white-space:nowrap}.streetsmart-loading-indicator[hidden]{display:none}.streetsmart-spinner{width:12px;height:12px;border:2px solid #c9d8df;border-top-color:var(--os-teal);border-radius:50%;animation:streetsmart-spin .75s linear infinite}@keyframes streetsmart-spin{to{transform:rotate(360deg)}}
+.streetsmart-aim-group{display:flex;align-items:center;gap:4px}.streetsmart-aim-group select{height:29px;max-width:92px;padding:3px 5px;border:1px solid var(--os-border);border-radius:5px;background:#fff;color:var(--os-navy);font-size:10px}.streetsmart-aim-group button{white-space:nowrap}
+@media(max-width:700px){.streetsmart-body{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.streetsmart-pane{border-right:0;border-bottom:1px solid #d8dde3}.streetsmart-pane:last-child{border-bottom:0}.streetsmart-head{flex-wrap:wrap}.streetsmart-status{width:100%;order:3;text-align:left}}
+.imagery-compare{position:fixed;inset:1vh 1vw;z-index:99998;background:#fff;border:1px solid var(--os-border);border-radius:8px;box-shadow:0 18px 45px rgba(4,44,83,.25);overflow:hidden;display:flex;flex-direction:column}
+.imagery-compare-head{position:relative;z-index:1000;min-height:42px;padding:7px 10px;border-bottom:1px solid #e1e5e9;display:flex;align-items:center;gap:10px;background:#f7f9fb;font-size:12px}
+.imagery-compare-head span{flex:1;color:var(--muted)}
+.imagery-compare-head button{position:relative;z-index:1001;width:34px;height:34px;border:1px solid var(--os-border);border-radius:8px;background:#fff;color:var(--os-navy);font-size:22px;cursor:pointer;pointer-events:auto}
+.imagery-compare-body{position:relative;display:grid;grid-template-columns:1fr 1fr;min-height:0;flex:1}
+.imagery-pane{position:relative;min-width:0;min-height:0;height:100%;border-right:1px solid #d8dde3}.imagery-pane:last-child{border-right:0}
+.imagery-pane h3{position:absolute;z-index:2;top:8px;left:8px;margin:0;padding:5px 8px;background:rgba(255,255,255,.9);border-radius:5px;font-size:12px}.imagery-map{width:100%;height:100%;min-height:0}
+.imagery-sketch-control{position:absolute;z-index:3;right:8px;top:8px;display:none;align-items:center;gap:5px;flex-wrap:wrap;padding:5px 7px;background:rgba(255,255,255,.94);border:1px solid var(--os-border);border-radius:6px;font-size:11px;max-width:calc(100% - 16px)}
+.imagery-sketch-control.visible{display:flex}
+.imagery-sketch-control input{width:70px}
+.imagery-sketch-control button{border:1px solid var(--os-border);border-radius:5px;background:#fff;color:var(--os-navy);padding:4px 6px;font-size:11px;cursor:pointer}.imagery-sketch-control button:hover{background:var(--accent-soft)}
+.imagery-sketch-rail{position:absolute;z-index:10000;left:50%;top:50%;display:none;flex-direction:column;align-items:center;gap:4px;transform:translate(-50%,-50%);padding:6px 5px;background:rgba(255,255,255,.96);border:1px solid var(--os-border);border-radius:9px;box-shadow:0 4px 14px rgba(4,44,83,.22)}
+.imagery-sketch-rail.visible{display:flex}
+.imagery-sketch-rail button{width:28px;height:28px;border:1px solid var(--os-border);border-radius:50%;background:#eaf5dc;color:#416900;font-size:16px;font-weight:800;line-height:1;cursor:pointer}
+.imagery-sketch-rail button:hover{background:#dff0c8;border-color:#82ad5d}
+.imagery-sketch-rail button[data-sketch-action="reset"]{width:auto;border-radius:5px;background:#fff;color:var(--os-navy);padding:3px 6px;font-size:10px}
+.imagery-sketch-rail label{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:9px;font-weight:700}
+.imagery-sketch-rail input{width:82px;margin:0}
+.imagery-sketch-value{min-width:35px;color:var(--os-navy);font:700 10px JetBrains Mono,monospace;text-align:center}
+.import-filter-backdrop{position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(4,44,83,.42)}
+.import-filter-modal{width:min(760px,96vw);max-height:min(760px,92vh);display:flex;flex-direction:column;background:#fff;border:1px solid var(--os-border);border-radius:10px;box-shadow:0 18px 45px rgba(4,44,83,.28);overflow:hidden}
+.import-filter-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:#f7f9fb}.import-filter-head h2{margin:0;color:var(--os-navy);font-size:17px}.import-filter-head p{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.4}.import-filter-close{margin-left:auto;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--os-navy);font-size:20px;width:30px;height:30px;line-height:1;cursor:pointer}
+.import-filter-body{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;overflow:auto}.import-filter-group{min-width:0;border:1px solid var(--line);border-radius:8px;background:#fbfcfd}.import-filter-group-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line);color:var(--os-navy);font-size:12px;font-weight:700}.import-filter-group-head span{color:var(--muted);font-weight:500}.import-filter-actions{display:flex;gap:5px}.import-filter-actions button{border:1px solid var(--line);border-radius:5px;background:#fff;color:var(--os-navy);padding:3px 6px;font-size:10px;cursor:pointer}.import-filter-options{max-height:300px;overflow:auto;padding:5px}.import-filter-option{display:flex;align-items:flex-start;gap:7px;padding:6px 5px;border-radius:5px;color:var(--os-ink);font-size:12px;line-height:1.3;cursor:pointer}.import-filter-option:hover{background:#eaf4f5}.import-filter-option input{flex:0 0 auto;margin-top:2px}.import-filter-option label{min-width:0;cursor:pointer}.import-filter-option small{color:var(--muted);white-space:nowrap;margin-left:3px}.import-filter-missing{padding:12px;color:var(--muted);font-size:12px}.import-filter-foot{display:flex;align-items:center;justify-content:flex-end;gap:7px;padding:11px 14px;border-top:1px solid var(--line);background:#fbfcfd}.import-filter-foot button{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:#fff;color:var(--os-navy);font-weight:700;cursor:pointer}.import-filter-foot button.primary{background:var(--os-teal);border-color:var(--os-teal);color:#fff}.import-filter-foot button:hover{filter:brightness(.97)}
+.parcel-hover{position:relative;cursor:help;color:var(--os-navy);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px}
+.property-snapshot{position:fixed !important;z-index:2147483647;display:none;width:250px;max-width:calc(100vw - 20px);box-sizing:border-box;padding:10px;background:#fff;border:1px solid var(--os-border);border-left:3px solid var(--os-teal);border-radius:8px;box-shadow:0 14px 32px rgba(4,44,83,.2);pointer-events:none}
+.property-snapshot.visible{display:block}
+.property-snapshot h4{margin:0 0 7px;color:var(--os-navy);font-family:"DM Sans",Inter,sans-serif;font-size:13px}
+.snapshot-table{width:100%;min-width:0;border-collapse:collapse;border-spacing:0;font-size:11px;line-height:1.25;table-layout:fixed}.snapshot-table th,.snapshot-table td{position:static;top:auto;z-index:auto;padding:4px 0;border:0;border-bottom:1px solid #edf0f3;background:transparent;text-align:left;text-transform:none;vertical-align:top}.snapshot-table th{width:43%;color:var(--os-muted);font-weight:600}.snapshot-table td{text-align:right;color:var(--os-ink);font-weight:600;overflow-wrap:anywhere}
+@media(max-width:700px){.imagery-compare-body{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.imagery-pane{border-right:0;border-bottom:1px solid #d8dde3}.imagery-pane:last-child{border-bottom:0}}
+@media(max-width:650px){.import-filter-body{grid-template-columns:1fr}.import-filter-options{max-height:220px}}
+@page{size:auto;margin:12mm}
+@media print{
+  body{display:block!important;min-height:0!important;background:#fff!important}
+  body *{visibility:hidden!important}
+  #routingPrintSheet,#routingPrintSheet *{visibility:visible!important}
+  #routingPrintSheet{display:block!important;position:absolute;left:0;top:0;width:100%;padding:0!important;color:#111;font:11pt Arial,sans-serif}
+  #routingPrintSheet h1{margin:0 0 4mm;font-size:18pt}
+  #routingPrintSheet .print-meta{margin-bottom:5mm;color:#333;font-size:10pt}
+  #routingPrintSheet table{width:100%;min-width:0;border-collapse:collapse;table-layout:fixed}
+  #routingPrintSheet th,#routingPrintSheet td{padding:2.5mm;border:1px solid #777;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+  #routingPrintSheet th{position:static;background:#eee;color:#111;font-size:9pt}
+  #routingPrintSheet td.print-notes{white-space:pre-wrap;min-height:12mm}
+  #routingPrintSheet tr{break-inside:avoid}
+}
+
+</style>
+</head>
+<body data-workspace-user-id="{{ request.user.id }}">
+<header>
+  <a class="brand" href="/routing/" aria-label="Field Operations home"><strong>Field Operations</strong><small>Company workspace</small></a>
+  <div class="tabs">
+    <button class="tab active" data-view="routes">Route Management</button>
+    <button class="tab" data-view="preinspection">Preinspection</button>
+    <button class="tab" data-view="fieldRoutes">Field Routes</button>
+  </div>
+  <div class="spacer"></div>
+</header>
+
+<div class="statusbar">
+  <span id="assignmentStat">Assignment: 0</span>
+  <span id="mappedStat">Mapped: 0</span>
+  <span id="assignedStat">Assigned: 0</span>
+  <span id="unassignedStat">Unassigned: 0</span>
+  <span id="completeStat">Preinspected: 0</span>
+</div>
+
+<section id="routesView" class="view active">
+  <div class="route-layout">
+    <div id="map"></div>
+
+    <aside class="side">
+      <h2>Route Management</h2>
+
+      <div id="setupSteps">
+        <div class="step-card" id="stepImport">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <b>Load annual assignment</b>
+            <div class="help">Start here. Parcel polygons load automatically after the assignment is imported.</div>
+            <label class="file-label primary step-action">
+              Import Assignment CSV or XLSX
+              <input id="assignmentFile" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            </label>
+          </div>
+        </div>
+
+        <div class="step-card" id="stepPolys">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <b>Parcel polygons</b>
+            <div id="mapMessage" class="help">Waiting for assignment.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-tools">
+        <div class="route-tools-head">
+          <b>Assign routes</b>
+          <span class="help">Draw an area or move parcels individually.</span>
+        </div>
+        <div class="route-name-row">
+          <input id="routeName" type="text" placeholder="Route 1" value="Route 1">
+          <button class="draw-route-btn" id="drawRouteBtn" type="button">✎ Draw Area</button>
+        </div>
+        <div class="selection-compact">
+          <div>
+            <span class="selection-number" id="selectionCount">0</span>
+            <span class="help">selected · <span id="selectionAlready">0</span> already assigned</span>
+          </div>
+          <div class="selection-actions">
+            <button class="btn primary" id="saveRoute">Assign</button>
+            <button class="btn" id="clearSelection">Clear</button>
+          </div>
+        </div>
+        <div id="selectionMessage"></div>
+      </div>
+
+      <h3>Routes</h3>
+      <div id="routeList" class="route-list"></div>
+
+      <details class="workspace-details">
+        <summary>Workspace tools</summary>
+        <div class="workspace-actions">
+          <button class="btn" id="exportBackup">Export Backup</button>
+          <label class="file-label">
+            Restore Backup
+            <input id="backupFile" type="file" accept=".json,application/json">
+          </label>
+          <button class="btn" id="exportProgress">Export Progress CSV</button>
+          <button class="btn" id="streetSmartSettings" type="button">StreetSmart save help</button>
+          <button class="btn danger" id="resetWorkspace">Reset Local Workspace</button>
+        </div>
+      </details>
+    </aside>
+  </div>
+</section>
+
+<section id="preinspectionView" class="view">
+  <div class="pre-wrap">
+    <div class="pre-toolbar simple pre-toolset">
+      <div class="workspace-controls" id="workspaceControls">
+        <label class="workspace-selector-label" for="workspaceSelect">Workspace</label>
+        <select id="workspaceSelect" aria-label="Preinspection workspace"></select>
+        <button class="workspace-button" id="newWorkspace" type="button" title="Create workspace"><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="workspace-button-label">New</span></button>
+        <button class="workspace-button" id="renameWorkspace" type="button" title="Rename workspace"><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 16 9.5-9.5 4 4L8 20H4zM14 6l2-2 4 4-2 2"/></svg></span><span class="workspace-button-label">Rename</span></button>
+        <button class="workspace-button" id="deleteWorkspace" type="button" title="Delete workspace"><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg></span><span class="workspace-button-label">Delete</span></button>
+        <button class="workspace-button" id="importWorkspace" type="button" title="Import workspace backup"><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></svg></span><span class="workspace-button-label">Import</span></button>
+        <input id="workspaceBackupFile" type="file" accept=".json,application/json" hidden>
+        <span id="workspaceSaveStatus" class="workspace-save-status" role="status">Loading…</span>
+      </div>
+      <div class="pre-filter-group">
+        <select id="preRouteFilter" aria-label="Filter by route"><option value="">All routes</option></select>
+        <div class="pre-search-control"><button class="pre-search-toggle" id="preSearchToggle" type="button" title="Search parcels" aria-label="Open parcel search" aria-expanded="false"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button><div class="pre-search-popover" id="preSearchPopover" hidden><input id="preSearch" type="text" placeholder="Search parcel or address" aria-label="Search parcel or address" autocomplete="off"><div id="preSearchSuggestions" class="pre-search-suggestions" role="listbox"></div></div></div>
+        <select id="preShowFilter" aria-label="Show parcels"><option value="all">All parcels</option><option value="incomplete">Incomplete only</option><option value="changes">Changes only</option></select>
+        <button class="pre-print-button" id="printCamaRoute" type="button" title="Print the selected route in preinspection order" aria-label="Print CAMA route sheet"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V4h12v5M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v6H6z"/><path d="M18 12h.01"/></svg></button>
+      </div>
+      <div class="pre-view-toggle" role="group" aria-label="Parcel display mode">
+        <button class="pre-view-button" type="button" data-pre-view-mode="list" aria-pressed="true">List</button>
+        <button class="pre-view-button" type="button" data-pre-view-mode="cards" aria-pressed="false">Cards</button>
+      </div>
+      <div class="pre-tool-status"><span class="pill" id="preSummary">0 parcels</span><span class="pill progress-pill" id="preProgress">0 / 0 complete</span><span class="pill field-pill" id="fieldSheetCount">0 field sheets</span><span id="salesCheckStatus" class="sales-check-status" role="status">Sales check waits for an assignment</span></div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="preinspection-table">
+        <thead>
+          <tr>
+            <th class="left">Parcel</th>
+            <th class="left">Address</th>
+            <th>Photo</th>
+            <th>Aerial</th>
+            <th>Listing</th>
+            <th>Changes</th>
+            <th class="left">Notes</th>
+          </tr>
+        </thead>
+        <tbody id="preBody">
+          <tr><td colspan="7" class="empty">Assign parcels to a route first.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="fieldRoutesView" class="view">
+  <div class="field-routes-layout">
+    <aside class="field-route-panel">
+      <h2>Field Visit Routes</h2>
+      <div class="help">YES parcels stay on their appraisal route and are added here for field visits. Drag stops to set the driving order.</div>
+      <div class="field-route-controls">
+        <select id="fieldRouteSelect" aria-label="Selected field route"></select>
+        <button id="newFieldRoute" type="button">+ Route</button>
+      </div>
+      <div class="field-route-actions">
+        <button class="primary" id="copyFieldParcels" type="button">Copy parcel numbers</button>
+        <button id="printFieldRoute" type="button">Print field sheet</button>
+        <button id="showFieldUnassigned" type="button">Unassigned (<span id="fieldUnassignedCount">0</span>)</button>
+        <button id="deleteFieldRoute" type="button">Delete route</button>
+      </div>
+      <div id="fieldRouteStatus" class="field-route-status" role="status"></div>
+      <div id="fieldRouteList" class="field-route-list"></div>
+    </aside>
+    <div id="fieldRouteMap" class="field-route-map" aria-label="Selected field route map"></div>
+  </div>
+</section>
+
+<section id="routingPrintSheet" hidden aria-live="polite"></section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.0/dist/leaflet-geoman.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+(() => {
+"use strict";
+
+const FEATURE_URL = "https://gis.skagitcountywa.gov/arcgis/rest/services/OpenData/AssessorDataParcels/FeatureServer/0/query";
+const ROUTING_BASEMAP_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+const ROUTING_BASEMAP_ATTRIBUTION = "&copy; Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), (c) OpenStreetMap contributors, and the GIS User Community";
+const STARTER_ASSIGNMENT = [];
+const CHECKS = ["aerial","listing"];
+const STORAGE_KEY = "skagit-preinspection-workspace-v1";
+const USER_CACHE_KEY = `skagit-preinspection-cache-user-${document.body.dataset.workspaceUserId || "unknown"}`;
+const PREINSPECTION_VIEW_MODE_KEY = `${USER_CACHE_KEY}-view-mode-v1`;
+const WORKSPACE_API = "/routing/api/workspaces/";
+const COLORS = ["#2f6fa3","#7b5aa6","#2f8c72","#b36b2c","#a44545","#5d7f3b","#8f5d75","#4d7f8e","#6f6f3c","#855f37"];
+
+let state = loadState() || {
+  version:1,
+  year:2026,
+  assignment:[],
+  parcelGeoJSON:null,
+  routes:{},
+  inspections:{}
+};
+if(!Object.prototype.hasOwnProperty.call(state,"activeParcel")) state.activeParcel="";
+if(!state.fieldRoutes || typeof state.fieldRoutes!="object" || Array.isArray(state.fieldRoutes)) state.fieldRoutes={};
+if(!Array.isArray(state.fieldUnassigned)) state.fieldUnassigned=[];
+if(!Object.prototype.hasOwnProperty.call(state,"activeFieldRoute")) state.activeFieldRoute="";
+
+let map, parcelLayer, drawLayer, fieldRouteMap, fieldRouteLayer;
+let selected = new Set();
+let parcelLayersById = new Map();
+let imageryCleanup = null;
+let streetsmartCleanup = null;
+let workspaceId = null;
+let workspaceRevision = null;
+let workspaceReady = false;
+let workspaceSaveTimer = null;
+let workspaceSaveInFlight = false;
+let workspaceSavePending = false;
+let parcelPolygonsLoading = false;
+
+function persist(){
+  try{localStorage.setItem(USER_CACHE_KEY, JSON.stringify(state));}catch(e){}
+  refreshStats();
+  queueWorkspaceSave();
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(USER_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+function legacyState(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){return null;}
+}
+
+function csrf(){
+  const match=document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+async function workspaceRequest(url,options={}){
+  options.credentials="same-origin";
+  options.headers={...(options.headers||{}),"X-CSRFToken":csrf()};
+  const response=await fetch(url,options);
+  const text=await response.text();
+  let payload={};
+  try{payload=text ? JSON.parse(text) : {};}catch(e){throw new Error("The server returned an unexpected response.");}
+  if(!response.ok) throw Object.assign(new Error(payload.error || "Workspace request failed."),{status:response.status,payload});
+  return payload;
+}
+
+function workspaceStatus(text,kind=""){
+  const el=document.getElementById("workspaceSaveStatus");
+  if(!el)return;
+  el.textContent=text;
+  el.classList.toggle("is-error",kind==="error");
+  el.classList.toggle("is-saved",kind==="saved");
+}
+
+function openStreetSmartSettings(){
+  const modal=document.createElement("div");
+  modal.className="routing-settings-modal";
+  modal.innerHTML=`<section class="routing-settings-card" role="dialog" aria-modal="true" aria-labelledby="routing-settings-title"><div class="routing-settings-head"><b id="routing-settings-title">Saving StreetSmart images</b><button type="button" id="routingSettingsClose" aria-label="Close help">×</button></div><div class="routing-settings-body"><p>Images download from your browser, not to the web server. Set your browser’s download folder to your work network drive once, and each “Save StreetSmart JPG” click will save there without another prompt. Turn off “Ask where to save each file” in browser settings.</p></div><div class="routing-settings-foot"><button type="button" id="routingSettingsCancel">Close</button></div></section>`;
+  document.body.appendChild(modal);
+  const close=()=>modal.remove();
+  modal.querySelector("#routingSettingsClose").addEventListener("click",close);
+  modal.querySelector("#routingSettingsCancel").addEventListener("click",close);
+  modal.addEventListener("click",event=>{if(event.target===modal)close();});
+}
+
+function cacheState(){try{localStorage.setItem(USER_CACHE_KEY,JSON.stringify(state));}catch(e){}}
+
+function workspaceStateForSave(){
+  // Parcel geometry is derived from the assignment and is intentionally kept
+  // out of the database payload; it is reloaded from Skagit GIS on open.
+  return {...state,parcelGeoJSON:null};
+}
+
+function queueWorkspaceSave(){
+  if(!workspaceReady || !workspaceId)return;
+  workspaceSavePending=true;
+  clearTimeout(workspaceSaveTimer);
+  workspaceSaveTimer=setTimeout(saveWorkspaceNow,500);
+  workspaceStatus("Saving…");
+}
+
+async function saveWorkspaceNow(){
+  clearTimeout(workspaceSaveTimer);
+  if(!workspaceReady || !workspaceId || workspaceSaveInFlight){workspaceSavePending=true;return;}
+  workspaceSavePending=false;
+  workspaceSaveInFlight=true;
+  try{
+    const payload=await workspaceRequest(`${WORKSPACE_API}${workspaceId}/state/`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({revision:workspaceRevision,state:workspaceStateForSave()})});
+    workspaceRevision=payload.revision;
+    cacheState();
+    workspaceStatus("Saved","saved");
+  }catch(error){
+    if(error.status===409) workspaceStatus("Changed elsewhere — reload this workspace","error");
+    else workspaceStatus(error.message || "Save failed","error");
+  }finally{
+    workspaceSaveInFlight=false;
+    if(workspaceSavePending) queueWorkspaceSave();
+  }
+}
+
+function normalizeWorkspaceState(value){
+  const next=value && typeof value==="object" ? value : {};
+  if(!Array.isArray(next.assignment)) next.assignment=[];
+  if(!next.routes || typeof next.routes!=="object" || Array.isArray(next.routes)) next.routes={};
+  if(!next.inspections || typeof next.inspections!=="object" || Array.isArray(next.inspections)) next.inspections={};
+  if(!next.fieldRoutes || typeof next.fieldRoutes!=="object" || Array.isArray(next.fieldRoutes)) next.fieldRoutes={};
+  if(!Array.isArray(next.fieldUnassigned)) next.fieldUnassigned=[];
+  if(!Object.prototype.hasOwnProperty.call(next,"activeParcel")) next.activeParcel="";
+  if(!Object.prototype.hasOwnProperty.call(next,"activeFieldRoute")) next.activeFieldRoute="";
+  if(!Object.keys(next.fieldRoutes).length){
+    const legacyYes=next.assignment.map(row=>row.PARCELID).filter(pid=>(next.inspections[String(pid)]||{}).changes==="yes");
+    if(legacyYes.length){
+      next.fieldRoutes={"Field Route 1":{name:"Field Route 1",color:COLORS[0],parcels:[...new Set(legacyYes)],updated:new Date().toISOString()}};
+      next.activeFieldRoute="Field Route 1";
+    }
+  }
+  next.version=2;
+  return next;
+}
+
+function renderWorkspaceControls(workspaces=[]){
+  const select=document.getElementById("workspaceSelect");
+  if(!select)return;
+  select.innerHTML=workspaces.length ? workspaces.map(item=>`<option value="${item.id}">${escapeHTML(item.name)} · ${item.parcel_count} parcels</option>`).join("") : '<option value="">No workspaces</option>';
+  if(workspaceId) select.value=String(workspaceId);
+}
+
+function emptyWorkspaceState(){
+  return {version:2,year:new Date().getFullYear(),assignment:[],parcelGeoJSON:null,routes:{},inspections:{},fieldRoutes:{},fieldUnassigned:[],activeParcel:"",activeFieldRoute:""};
+}
+
+function refreshWorkspaceUI(){
+  selected.clear();
+  if(parcelLayer) parcelLayer.clearLayers();
+  parcelLayersById.clear();
+  if(state.parcelGeoJSON) renderParcelGeoJSON();
+  renderRoutes();
+  renderPreinspection();
+  renderFieldRoutes();
+  refreshSelectionUI();
+  refreshStats();
+  updateMapMessage();
+  refreshSetupVisibility();
+  if(state.assignment.length && !state.parcelGeoJSON) fetchParcelPolygons();
+  refreshRecentSales();
+}
+
+async function loadWorkspace(workspace){
+  workspaceReady=false;
+  const payload=await workspaceRequest(`${WORKSPACE_API}${workspace.id}/`);
+  workspaceId=payload.id;
+  workspaceRevision=payload.revision;
+  state=normalizeWorkspaceState(payload.state);
+  cacheState();
+  workspaceReady=true;
+  const list=await workspaceRequest(WORKSPACE_API);
+  renderWorkspaceControls(list.workspaces||[]);
+  workspaceStatus("Saved","saved");
+  refreshWorkspaceUI();
+}
+
+async function createWorkspace(name="Untitled workspace",initialState=null){
+  workspaceReady=false;
+  const newState=normalizeWorkspaceState(initialState || emptyWorkspaceState());
+  const payload=await workspaceRequest(WORKSPACE_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,year:newState.year||2026,state:newState})});
+  workspaceId=payload.id;
+  workspaceRevision=payload.revision;
+  state=normalizeWorkspaceState(payload.state);
+  cacheState();
+  workspaceReady=true;
+  workspaceStatus("Saved","saved");
+  const list=await workspaceRequest(WORKSPACE_API);
+  renderWorkspaceControls(list.workspaces||[]);
+  refreshWorkspaceUI();
+  return payload;
+}
+
+async function initializeWorkspaces(){
+  try{
+    const payload=await workspaceRequest(WORKSPACE_API);
+    const workspaces=payload.workspaces||[];
+    renderWorkspaceControls(workspaces);
+    if(workspaces.length){
+      await loadWorkspace(workspaces[0]);
+    }else{
+      await createWorkspace("My preinspection workspace");
+      const old=legacyState();
+      if(old?.assignment?.length && confirm("This browser has an older local assignment. Import it into your new database workspace?")){
+        state=normalizeWorkspaceState(old);
+        persist();
+        await saveWorkspaceNow();
+        refreshWorkspaceUI();
+        try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+      }
+    }
+  }catch(error){
+    workspaceStatus(error.message || "Workspace loading failed","error");
+    workspaceReady=false;
+    refreshWorkspaceUI();
+  }
+}
+
+function assignmentMap(){
+  return new Map(state.assignment.map(r => [String(r.PARCELID).trim(), r]));
+}
+
+function routeForParcel(pid){
+  for(const [name, rt] of Object.entries(state.routes)){
+    if((rt.parcels || []).includes(pid)) return name;
+  }
+  return "";
+}
+
+function allAssignedSet(){
+  const s = new Set();
+  Object.values(state.routes).forEach(r => (r.parcels || []).forEach(p => s.add(p)));
+  return s;
+}
+
+function inspection(pid){
+  if(!state.inspections[pid]){
+    state.inspections[pid] = {aerial:false,listing:false,changes:"",notes:""};
+  }
+  return state.inspections[pid];
+}
+
+function isComplete(pid){
+  const s = inspection(pid);
+  return s.changes === "yes" || s.changes === "no";
+}
+
+function fieldRouteNames(){
+  return Object.keys(state.fieldRoutes).sort(routeSort);
+}
+
+function fieldRouteForParcel(pid){
+  return fieldRouteNames().find(name=>(state.fieldRoutes[name].parcels||[]).includes(pid)) || "";
+}
+
+function ensureFieldRoute(name="Field Route 1"){
+  name=String(name||"").trim();
+  if(!name) name="Field Route 1";
+  if(!state.fieldRoutes[name]){
+    state.fieldRoutes[name]={name,color:COLORS[fieldRouteNames().length % COLORS.length],parcels:[],updated:new Date().toISOString()};
+  }
+  return name;
+}
+
+function addYesParcelToFieldRoute(pid){
+  if(!pid || fieldRouteForParcel(pid)) return;
+  const routeName=ensureFieldRoute(fieldRouteNames()[0] || "Field Route 1");
+  const route=state.fieldRoutes[routeName];
+  route.parcels=route.parcels||[];
+  if(!route.parcels.includes(pid)) route.parcels.push(pid);
+  route.updated=new Date().toISOString();
+  state.activeFieldRoute=state.activeFieldRoute || routeName;
+  state.fieldUnassigned=(state.fieldUnassigned||[]).filter(value=>value!==pid);
+}
+
+function moveFieldParcel(pid,targetRoute,insertIndex=null){
+  if(!pid || !state.fieldRoutes[targetRoute]) return;
+  const sourceName=fieldRouteForParcel(pid);
+  if(sourceName){
+    state.fieldRoutes[sourceName].parcels=(state.fieldRoutes[sourceName].parcels||[]).filter(value=>value!==pid);
+  }else{
+    state.fieldUnassigned=(state.fieldUnassigned||[]).filter(value=>value!==pid);
+  }
+  const target=state.fieldRoutes[targetRoute];
+  target.parcels=target.parcels||[];
+  const index=insertIndex===null ? target.parcels.length : Math.max(0,Math.min(Number(insertIndex),target.parcels.length));
+  target.parcels.splice(index,0,pid);
+  target.updated=new Date().toISOString();
+  state.activeFieldRoute=targetRoute;
+}
+
+function fieldParcelRows(name){
+  const amap=assignmentMap();
+  return (state.fieldRoutes[name]?.parcels||[]).map(pid=>amap.get(pid)).filter(Boolean);
+}
+
+function initFieldRouteMap(){
+  if(fieldRouteMap || typeof L==="undefined") return;
+  fieldRouteMap=L.map("fieldRouteMap",{preferCanvas:true}).setView([48.42,-122.33],13);
+  addRoutingBasemap(fieldRouteMap);
+  fieldRouteLayer=L.layerGroup().addTo(fieldRouteMap);
+}
+
+function addRoutingBasemap(targetMap){
+  L.tileLayer(ROUTING_BASEMAP_URL,{maxZoom:20,opacity:.62,attribution:ROUTING_BASEMAP_ATTRIBUTION}).addTo(targetMap);
+}
+
+function renderFieldRouteMap(){
+  initFieldRouteMap();
+  if(!fieldRouteMap || !fieldRouteLayer) return;
+  fieldRouteLayer.clearLayers();
+  const routeName=state.activeFieldRoute;
+  const route=state.fieldRoutes[routeName];
+  const bounds=[];
+  const featuresByParcel=new Map((state.parcelGeoJSON?.features||[]).map(feature=>[String(feature.properties?.PARCELID||"").trim().toUpperCase(),feature]));
+  (route?.parcels||[]).forEach((pid,index)=>{
+    const feature=featuresByParcel.get(String(pid).trim().toUpperCase());
+    if(!feature) return;
+    const geo=L.geoJSON(feature,{style:{color:route.color||"#2f8c72",weight:2,fillColor:route.color||"#2f8c72",fillOpacity:.25}}).addTo(fieldRouteLayer);
+    geo.bindTooltip(`${index+1}. ${escapeHTML(pid)}`,{sticky:true});
+    const b=geo.getBounds(); if(b.isValid()){bounds.push(b);L.marker(b.getCenter(),{icon:L.divIcon({className:"field-stop-marker",html:`<span>${index+1}</span>`,iconSize:[28,28],iconAnchor:[14,14]})}).bindTooltip(`${index+1}. ${escapeHTML(pid)}`).addTo(fieldRouteLayer);}
+  });
+  if(bounds.length){const group=L.featureGroup(bounds.map(b=>L.rectangle(b,{weight:0,opacity:0,fillOpacity:0})));fieldRouteMap.fitBounds(group.getBounds().pad(.08));}
+  else if(route?.parcels?.length && !state.parcelGeoJSON){
+    document.getElementById("fieldRouteStatus").textContent="Loading Skagit parcel map data…";
+    if(state.assignment.length && !parcelPolygonsLoading) fetchParcelPolygons();
+  }
+}
+
+function renderFieldRoutes(){
+  const select=document.getElementById("fieldRouteSelect");
+  const list=document.getElementById("fieldRouteList");
+  const names=fieldRouteNames();
+  if(!names.length){
+    select.innerHTML='<option value="">No field routes</option>';
+    list.className="field-route-list empty";
+    list.textContent="Mark a parcel YES on the Preinspection page to create the first field route.";
+    document.getElementById("fieldUnassignedCount").textContent=String((state.fieldUnassigned||[]).length);
+    return;
+  }
+  if(!names.includes(state.activeFieldRoute)) state.activeFieldRoute=names[0];
+  select.innerHTML=names.map(name=>`<option value="${escapeAttr(name)}">${escapeHTML(name)} (${(state.fieldRoutes[name].parcels||[]).length})</option>`).join("");
+  select.value=state.activeFieldRoute;
+  const route=state.fieldRoutes[state.activeFieldRoute];
+  list.className="field-route-list";
+  const assignedMarkup=names.map(name=>{
+    const routeRows=fieldParcelRows(name);
+    const stops=routeRows.length ? routeRows.map((a,index)=>{
+      const pid=a.PARCELID, address=parcelAddress(a);
+      return `<div class="field-stop" draggable="true" data-field-route="${escapeAttr(name)}" data-field-pid="${escapeAttr(pid)}" data-field-index="${index}"><span class="field-stop-number">${index+1}</span><div class="field-stop-main"><b>${escapeHTML(pid.replace(/^P/i,""))}</b><span>${escapeHTML(address||"No address")}</span></div><button class="field-stop-remove" type="button" data-field-remove="${escapeAttr(pid)}" title="Remove from field route">×</button></div>`;
+    }).join("") : '<div class="help">Drop parcels here.</div>';
+    return `<section class="field-route-column ${name===state.activeFieldRoute?"is-active":""}" data-field-route-column="${escapeAttr(name)}"><div class="field-route-column-head"><b>${escapeHTML(name)}</b><span>${routeRows.length} stop${routeRows.length===1?"":"s"}</span></div><div class="field-route-drop" data-field-route-drop="${escapeAttr(name)}">${stops}</div></section>`;
+  }).join("");
+  const unassignedRows=(state.fieldUnassigned||[]).map(pid=>assignmentMap().get(pid)).filter(Boolean);
+  const unassignedMarkup=unassignedRows.length ? `<div class="field-unassigned-heading">Unassigned YES parcels — drag into this route</div>`+unassignedRows.map(a=>`<div class="field-stop unassigned" draggable="true" data-field-pid="${escapeAttr(a.PARCELID)}"><span class="field-stop-number">+</span><div class="field-stop-main"><b>${escapeHTML(a.PARCELID.replace(/^P/i,""))}</b><span>${escapeHTML(parcelAddress(a)||"No address")}</span></div><span></span></div>`).join("") : "";
+  list.innerHTML=assignedMarkup+unassignedMarkup;
+  document.getElementById("fieldUnassignedCount").textContent=String((state.fieldUnassigned||[]).length);
+  document.getElementById("fieldRouteStatus").textContent=`${(route?.parcels||[]).length} stop${(route?.parcels||[]).length===1?"":"s"} selected · drag within or between routes`;
+  renderFieldRouteMap();
+}
+
+function copyFieldParcelNumbers(){
+  const values=(state.fieldRoutes[state.activeFieldRoute]?.parcels||[]).map(pid=>String(pid).replace(/^P/i,""));
+  if(!values.length){document.getElementById("fieldRouteStatus").textContent="No parcel numbers to copy.";return;}
+  const text=values.join("\n");
+  const done=()=>{document.getElementById("fieldRouteStatus").textContent=`Copied ${values.length} parcel number${values.length===1?"":"s"} without the P prefix.`;};
+  if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
+  else fallbackCopy(text,done);
+}
+
+function fallbackCopy(text,done){
+  const helper=document.createElement("textarea");helper.value=text;helper.setAttribute("readonly","");helper.style.position="fixed";helper.style.opacity="0";document.body.appendChild(helper);helper.select();
+  try{if(!document.execCommand("copy")) throw new Error("copy failed");done();}catch(e){document.getElementById("fieldRouteStatus").textContent="Copy failed. Select the route list and copy manually.";}finally{helper.remove();}
+}
+
+function loadPreinspectionViewMode(){
+  try{return localStorage.getItem(PREINSPECTION_VIEW_MODE_KEY)==="cards" ? "cards" : "list";}catch(e){return "list";}
+}
+
+let preinspectionViewMode=loadPreinspectionViewMode();
+
+function setPreinspectionViewMode(mode){
+  preinspectionViewMode=mode==="cards" ? "cards" : "list";
+  try{localStorage.setItem(PREINSPECTION_VIEW_MODE_KEY,preinspectionViewMode);}catch(e){}
+  renderPreinspection();
+}
+
+function updatePreinspectionViewToggle(){
+  document.querySelectorAll("[data-pre-view-mode]").forEach(button=>{
+    const selected=button.dataset.preViewMode===preinspectionViewMode;
+    button.setAttribute("aria-pressed",selected?"true":"false");
+  });
+}
+
+function preinspectionFilters(){
+  return {
+    route:document.getElementById("preRouteFilter")?.value || "",
+    query:(document.getElementById("preSearch")?.value || "").trim().toLowerCase(),
+    show:document.getElementById("preShowFilter")?.value || "all"
+  };
+}
+
+function renderPreSearchSuggestions(){
+  const input=document.getElementById("preSearch");
+  const list=document.getElementById("preSearchSuggestions");
+  if(!input || !list)return;
+  const query=input.value.trim().toLowerCase();
+  if(!query){list.innerHTML='<div class="pre-search-empty">Type a parcel number or address.</div>';return;}
+  const rows=preinspectionRowsFor({...preinspectionFilters(),query:""}).filter(row=>row.pid.toLowerCase().includes(query)||row.addr.toLowerCase().includes(query)).slice(0,10);
+  list.innerHTML=rows.length ? rows.map(row=>`<button class="pre-search-suggestion" type="button" data-pre-search-pick="${escapeAttr(row.pid)}" role="option"><b>${escapeHTML(row.pid)}</b><span>${escapeHTML(row.addr||"No address")}</span></button>`).join("") : '<div class="pre-search-empty">No matching parcels.</div>';
+}
+
+function setPreSearchOpen(open){
+  const popover=document.getElementById("preSearchPopover");
+  const toggle=document.getElementById("preSearchToggle");
+  if(!popover || !toggle)return;
+  popover.hidden=!open;
+  toggle.setAttribute("aria-expanded",open?"true":"false");
+  if(open){renderPreSearchSuggestions();document.getElementById("preSearch")?.focus();}
+}
+
+function preinspectionRowsFor(filters=preinspectionFilters()){
+  const rows=[];
+  const routeNames=Object.keys(state.routes).sort(routeSort).filter(n=>!filters.route || n===filters.route);
+  routeNames.forEach(rtName=>{
+    const rt=state.routes[rtName];
+    walkingOrderForRoute(rt.parcels||[]).forEach(a=>{
+      const pid=a.PARCELID;
+      const complete=isComplete(pid);
+      const addr=parcelAddress(a);
+      if(filters.show==="incomplete" && complete) return;
+      if(filters.show==="changes" && inspection(pid).changes!=="yes") return;
+      if(filters.query && !(pid.toLowerCase().includes(filters.query)||addr.toLowerCase().includes(filters.query))) return;
+      rows.push({rtName,a,pid,complete,addr});
+    });
+  });
+  return rows;
+}
+
+function normalizeActiveParcel(rows){
+  const visible=new Set(rows.map(row=>row.pid));
+  if(state.activeParcel && visible.has(state.activeParcel) && !isComplete(state.activeParcel)) return;
+  const next=rows.find(row=>!row.complete);
+  state.activeParcel=next ? next.pid : "";
+}
+
+function findPreinspectionRow(pid){
+  let match=null;
+  document.querySelectorAll("#preBody tr[data-pid]").forEach(row=>{
+    if(row.dataset.pid===pid) match=row;
+  });
+  return match;
+}
+
+function paintActiveParcelInDom(pid){
+  document.querySelectorAll("#preBody tr[data-pid]").forEach(row=>{
+    row.classList.toggle("active-parcel",row.dataset.pid===pid);
+  });
+}
+
+function restoreActiveParcel(options={}){
+  const row=findPreinspectionRow(state.activeParcel);
+  if(!row) return;
+  paintActiveParcelInDom(state.activeParcel);
+  row.scrollIntoView({behavior:"smooth",block:"center"});
+  if(options.pulse){
+    row.classList.remove("row-pulse");
+    void row.offsetWidth;
+    row.classList.add("row-pulse");
+    window.setTimeout(()=>row.classList.remove("row-pulse"),850);
+  }
+}
+
+function setActiveParcel(pid,options={}){
+  if(!pid) return;
+  state.activeParcel=pid;
+  persist();
+  if(options.render) renderPreinspection();
+  if(options.scroll || options.pulse) requestAnimationFrame(()=>restoreActiveParcel(options));
+}
+
+function nextPreinspectionParcelAfter(pid){
+  const rows=preinspectionRowsFor();
+  const index=rows.findIndex(row=>row.pid===pid);
+  const after=index>=0 ? rows.slice(index+1) : rows;
+  return (after.find(row=>!row.complete) || rows.find(row=>!row.complete) || {}).pid || "";
+}
+
+function advanceActiveParcelFrom(pid){
+  const next=nextPreinspectionParcelAfter(pid);
+  if(next) setActiveParcel(next,{render:true,scroll:true,pulse:true});
+  else{renderPreinspection();refreshStats();}
+}
+
+function parseCSV(text){
+  const rows=[]; let row=[], cell="", quoted=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(quoted){
+      if(ch === '"' && text[i+1] === '"'){cell+='"';i++}
+      else if(ch === '"') quoted=false;
+      else cell+=ch;
+    }else{
+      if(ch === '"') quoted=true;
+      else if(ch === ","){row.push(cell);cell=""}
+      else if(ch === "\n"){row.push(cell);rows.push(row);row=[];cell=""}
+      else if(ch !== "\r") cell+=ch;
+    }
+  }
+  if(cell.length || row.length){row.push(cell);rows.push(row)}
+  return rows;
+}
+
+async function parseAssignmentFile(file){
+  if(/\.xlsx$/i.test(file.name)){
+    if(typeof XLSX === "undefined") throw new Error("The XLSX parser is unavailable. Check your local network connection and reload the page.");
+    const workbook=XLSX.read(await file.arrayBuffer(),{type:"array",cellDates:false});
+    const sheet=workbook.Sheets[workbook.SheetNames[0]];
+    if(!sheet) throw new Error("The XLSX file does not contain a worksheet.");
+    return XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false});
+  }
+  return parseCSV(await file.text());
+}
+
+function openImportFilterDialog(rows){
+  const headers=(rows[0]||[]).map(value=>String(value??"").trim());
+  const idx=name=>headers.findIndex(header=>header.toLowerCase()===name.toLowerCase());
+  const fields=[{key:"LandUse",label:"LandUse"},{key:"NeighborCode",label:"Neighborhood code"}];
+  const groups=fields.map(field=>{
+    const column=idx(field.key);
+    const counts=new Map();
+    if(column>=0) rows.slice(1).forEach(row=>{
+      const value=String(row[column]??"").trim();
+      counts.set(value,(counts.get(value)||0)+1);
+    });
+    return {...field,column,values:[...counts.entries()].sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true,sensitivity:"base"}))};
+  });
+  const optionMarkup=group=>group.column<0
+    ? `<div class="import-filter-missing">This column was not found in the file.</div>`
+    : group.values.length
+      ? group.values.map(([value,count],index)=>`<div class="import-filter-option"><input type="checkbox" checked data-import-filter="${group.key}" data-import-filter-index="${index}" id="import-filter-${group.key}-${index}"><label for="import-filter-${group.key}-${index}">${escapeHTML(value||"(blank)")} <small>${count}</small></label></div>`).join("")
+      : `<div class="import-filter-missing">No values found.</div>`;
+  const modal=document.createElement("div");
+  modal.className="import-filter-backdrop";
+  modal.innerHTML=`<section class="import-filter-modal" role="dialog" aria-modal="true" aria-labelledby="import-filter-title"><div class="import-filter-head"><div><h2 id="import-filter-title">Filter assignment before loading</h2><p>All values are selected by default. Uncheck the LandUse or neighborhood codes you do not want to keep.</p></div><button type="button" class="import-filter-close" aria-label="Cancel import">×</button></div><div class="import-filter-body">${groups.map(group=>`<section class="import-filter-group" data-import-filter-group="${group.key}"><div class="import-filter-group-head"><div>${group.label} <span>${group.column<0?"":"("+group.values.length+")"}</span></div><div class="import-filter-actions"><button type="button" data-import-filter-action="all">Keep all</button><button type="button" data-import-filter-action="none">Clear</button></div></div><div class="import-filter-options">${optionMarkup(group)}</div></section>`).join("")}</div><div class="import-filter-foot"><button type="button" class="import-filter-cancel">Cancel</button><button type="button" class="primary import-filter-apply">Load selected parcels</button></div></section>`;
+  document.body.appendChild(modal);
+  return new Promise(resolve=>{
+    let settled=false;
+    const finish=value=>{if(settled)return;settled=true;modal.remove();resolve(value);};
+    modal.querySelectorAll("[data-import-filter-action]").forEach(button=>button.addEventListener("click",()=>{
+      const group=button.closest("[data-import-filter-group]");
+      group.querySelectorAll("input[data-import-filter]").forEach(input=>{input.checked=button.dataset.importFilterAction==="all";});
+    }));
+    modal.querySelector(".import-filter-apply").addEventListener("click",()=>{
+      const selected={};
+      groups.forEach(group=>{
+        if(group.column<0)return;
+        selected[group.key]=new Set([...modal.querySelectorAll(`input[data-import-filter="${group.key}"]:checked`)].map(input=>group.values[Number(input.dataset.importFilterIndex)]?.[0]??""));
+      });
+      const filtered=rows.filter((row,rowIndex)=>{
+        if(rowIndex===0)return true;
+        return groups.every(group=>group.column<0 || selected[group.key].has(String(row[group.column]??"").trim()));
+      });
+      finish(filtered);
+    });
+    modal.querySelectorAll(".import-filter-cancel,.import-filter-close").forEach(button=>button.addEventListener("click",()=>finish(null)));
+  });
+}
+
+function normalizeAssignment(rows){
+  if(!rows.length) return [];
+  const headers=rows[0].map(h=>h.trim());
+  const idx=(name)=>headers.findIndex(h=>h.toLowerCase()===name.toLowerCase());
+  const firstIndex=(...names)=>names.map(idx).find(i=>i>=0) ?? -1;
+  const p=idx("PARCELID"), no=idx("SitusStNo"), st=idx("SitusStName"), csz=idx("SitusCSZ"), hood=idx("NeighborCode"), x=idx("XCoordinate"), y=idx("YCoordinate");
+  const land=firstIndex("LandUse","Land Use","LandUseCode");
+  const owner=firstIndex("OwnerName","Owner Name","Owner","Owner1");
+  const building=firstIndex("BuildingValue","Building Value","ImprovementValue","Improvement Value");
+  const assessed=firstIndex("AssessedValue","Assessed Value","TotalValue","Total Value");
+  const landValue=firstIndex("LandValue","Land Value");
+  const tbd=idx("TBD");
+  if(p<0) throw new Error("Assignment must contain PARCELID.");
+  return rows.slice(1).filter(r=>r[p] && r[p].trim()).map(r=>({
+    PARCELID:(r[p]||"").trim(),
+    SitusStNo:no>=0?(r[no]||"").trim():"",
+    SitusStName:st>=0?(r[st]||"").trim():"",
+    SitusCSZ:csz>=0?(r[csz]||"").trim():"",
+    NeighborCode:hood>=0?(r[hood]||"").trim():"",
+    XCoordinate:x>=0?(r[x]||"").trim():"",
+    YCoordinate:y>=0?(r[y]||"").trim():"",
+    LandUse:land>=0?(r[land]||"").trim():"",
+    TBD:tbd>=0?(r[tbd]||"").trim():"",
+    OwnerName:owner>=0?(r[owner]||"").trim():"",
+    BuildingValue:building>=0?(r[building]||"").trim():"",
+    AssessedValue:assessed>=0?(r[assessed]||"").trim():"",
+    LandValue:landValue>=0?(r[landValue]||"").trim():""
+  }));
+}
+
+function initMap(){
+  map = L.map("map", {preferCanvas:true}).setView([48.42,-122.33], 13);
+  addRoutingBasemap(map);
+
+  parcelLayer = L.geoJSON(null,{
+    style: feature => parcelStyle(feature),
+    onEachFeature:(feature,layer)=>{
+      const pid=feature.properties.PARCELID;
+      parcelLayersById.set(pid,layer);
+      layer.on("click", ()=>{
+        toggleSelected(pid);
+      });
+      layer.bindPopup(()=>parcelPopup(pid));
+    }
+  }).addTo(map);
+
+  drawLayer = L.featureGroup().addTo(map);
+
+  map.pm.addControls({
+    position:"topleft",
+    drawMarker:false, drawCircleMarker:false, drawPolyline:false, drawRectangle:false,
+    drawCircle:false, drawText:false, drawPolygon:false,
+    editMode:true, dragMode:false, cutPolygon:false, removalMode:true, rotateMode:false
+  });
+
+  map.on("pm:create", e=>{
+    drawLayer.clearLayers();
+    drawLayer.addLayer(e.layer);
+    selectByPolygon(e.layer.toGeoJSON());
+  });
+
+  map.on("pm:edit", ()=>{
+    const layers=drawLayer.getLayers();
+    if(layers[0]) selectByPolygon(layers[0].toGeoJSON());
+  });
+
+  map.on("popupopen", e=>{
+    const el=e.popup.getElement();
+    if(!el) return;
+
+    const moveBtn=el.querySelector("[data-popup-move]");
+    if(moveBtn){
+      moveBtn.addEventListener("click",()=>{
+        const route=el.querySelector("[data-popup-route]");
+        moveParcelToRoute(moveBtn.dataset.popupMove,route?.value || "");
+      },{once:true});
+    }
+
+    const unassignBtn=el.querySelector("[data-popup-unassign]");
+    if(unassignBtn){
+      unassignBtn.addEventListener("click",()=>{
+        unassignParcel(unassignBtn.dataset.popupUnassign);
+      },{once:true});
+    }
+
+    const removeBtn=el.querySelector("[data-popup-remove]");
+    if(removeBtn){
+      removeBtn.addEventListener("click",()=>removeParcelFromAssignment(removeBtn.dataset.popupRemove),{once:true});
+    }
+  });
+
+  const legend=L.control({position:"bottomleft"});
+  legend.onAdd=()=>{
+    const div=L.DomUtil.create("div","legend");
+    div.innerHTML='<div><i style="background:#d9edf8;border:1px solid #174968"></i>Assignment / unassigned</div>'+
+                  '<div><i style="background:#ffd15a"></i>Selected</div>'+
+                  '<div><i style="background:#2f6fa3"></i>Assigned route</div>';
+    return div;
+  };
+  legend.addTo(map);
+
+  if(state.parcelGeoJSON) renderParcelGeoJSON();
+}
+
+function parcelPopup(pid){
+  const a=assignmentMap().get(pid) || {};
+  const current=routeForParcel(pid) || "Unassigned";
+  const addr=(a.SitusStNo+" "+a.SitusStName).trim();
+  const routeOptions=Object.keys(state.routes).sort(routeSort).map(name=>`<option value="${escapeAttr(name)}" ${name===current?"selected":""}>${escapeHTML(name)}</option>`).join("");
+  return `<table class="popup-data"><tr><th>Parcel</th><td>${escapeHTML(pid)}</td></tr><tr><th>Address</th><td>${escapeHTML(addr || "—")}</td></tr><tr><th>LandUse</th><td>${escapeHTML(a.LandUse || "—")}</td></tr><tr><th>TBD</th><td>${escapeHTML(a.TBD || "—")}</td></tr><tr><th>Route</th><td>${escapeHTML(current)}</td></tr></table>
+    <div class="popup-actions">
+      <div class="popup-route-row"><select data-popup-route="${escapeAttr(pid)}" aria-label="Destination route">${routeOptions || '<option value="">No routes yet</option>'}</select><button class="popup-move" data-popup-move="${escapeAttr(pid)}">Move</button></div>
+      ${current!=="Unassigned" ? `<button class="popup-unassign" data-popup-unassign="${escapeAttr(pid)}">Remove from route</button>` : ""}
+      <button class="popup-remove" data-popup-remove="${escapeAttr(pid)}">🗑 Remove from assignment</button>
+    </div>`;
+}
+
+function parcelStyle(feature){
+  const pid=feature.properties.PARCELID;
+  if(selected.has(pid)){
+    return {color:"#7a4a00",weight:3,fillColor:"#ffd15a",fillOpacity:.72};
+  }
+  const rt=routeForParcel(pid);
+  if(isComplete(pid)){
+    return {color:"#235c35",weight:2.5,fillColor:"#6ca67d",fillOpacity:.72};
+  }
+  if(rt){
+    const color=state.routes[rt]?.color || "#2f6fa3";
+    return {color:color,weight:2.1,fillColor:color,fillOpacity:.50};
+  }
+  return {color:"#174968",weight:1.45,fillColor:"#d9edf8",fillOpacity:.42};
+}
+
+function refreshParcelStyles(){
+  parcelLayer.eachLayer(layer=>{
+    if(layer.feature) layer.setStyle(parcelStyle(layer.feature));
+  });
+}
+
+function renderParcelGeoJSON(){
+  parcelLayersById.clear();
+  parcelLayer.clearLayers();
+  parcelLayer.addData(state.parcelGeoJSON);
+  try{
+    const b=parcelLayer.getBounds();
+    if(b.isValid()) map.fitBounds(b.pad(.05));
+  }catch(e){}
+  refreshParcelStyles();
+  updateMapMessage();
+}
+
+async function fetchParcelPolygons(){
+  if(parcelPolygonsLoading) return;
+  if(!state.assignment.length){
+    alert("Import an assignment first.");
+    return;
+  }
+  parcelPolygonsLoading=true;
+  const btn=document.getElementById("drawRouteBtn");
+  btn.disabled=true;
+  const msg=document.getElementById("mapMessage");
+  msg.textContent="Loading parcel polygons from Skagit County…";
+
+  const ids=[...new Set(state.assignment.map(r=>r.PARCELID))];
+  const features=[];
+  const batchSize=70;
+
+  try{
+    for(let i=0;i<ids.length;i+=batchSize){
+      const batch=ids.slice(i,i+batchSize);
+      const where="PARCELID IN (" + batch.map(v=>"'"+v.replace(/'/g,"''")+"'").join(",") + ")";
+      const params=new URLSearchParams({
+        f:"geojson",
+        where,
+        outFields:"PARCELID,SitusStNo,SitusStName",
+        returnGeometry:"true",
+        outSR:"4326"
+      });
+      const res=await fetch(FEATURE_URL,{
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+        body:params.toString()
+      });
+      if(!res.ok) throw new Error("Skagit parcel service returned "+res.status);
+      const gj=await res.json();
+      if(gj.error) throw new Error(gj.error.message || "ArcGIS query failed");
+      (gj.features||[]).forEach(f=>features.push(f));
+      msg.textContent=`Loaded ${features.length} of ${ids.length} parcel polygons…`;
+    }
+    state.parcelGeoJSON={type:"FeatureCollection",features};
+    persist();
+    renderParcelGeoJSON();
+    renderFieldRoutes();
+  }catch(err){
+    console.error(err);
+    msg.textContent="Could not load parcel polygons. Check internet access and try again.";
+    alert("Parcel polygons could not be loaded. " + err.message);
+  }finally{
+    parcelPolygonsLoading=false;
+    btn.disabled=false;
+  }
+}
+
+function updateMapMessage(){
+  refreshSetupVisibility();
+  const mapped=state.parcelGeoJSON?.features?.length || 0;
+  const total=state.assignment.length;
+  document.getElementById("mapMessage").textContent =
+    mapped ? `Ready — ${mapped} of ${total} assignment parcels mapped.` :
+    total ? "Loading parcel polygons automatically…" :
+            "Waiting for assignment.";
+}
+
+function selectByPolygon(drawGeoJSON){
+  if(!state.parcelGeoJSON) return alert("Load parcel polygons first.");
+  selected.clear();
+  const routePoly=drawGeoJSON;
+  for(const f of state.parcelGeoJSON.features){
+    try{
+      if(turf.booleanIntersects(f, routePoly)){
+        selected.add(f.properties.PARCELID);
+      }
+    }catch(e){}
+  }
+  refreshSelectionUI();
+}
+
+
+function moveParcelToRoute(pid,name){
+  name=(name || "").trim();
+  if(!name) return alert("Enter the destination route name in the sidebar first.");
+
+  // Remove parcel from all other routes.
+  for(const rt of Object.values(state.routes)){
+    rt.parcels=(rt.parcels||[]).filter(p=>p!==pid);
+  }
+
+  if(!state.routes[name]){
+    state.routes[name]={
+      name,
+      color:COLORS[Object.keys(state.routes).length % COLORS.length],
+      parcels:[],
+      updated:new Date().toISOString(),
+      boundary:null,
+      boundaries:[]
+    };
+  }
+
+  if(!state.routes[name].parcels.includes(pid)){
+    state.routes[name].parcels.push(pid);
+  }
+  state.routes[name].updated=new Date().toISOString();
+
+  persist();
+  renderRoutes();
+  renderPreinspection();
+  refreshParcelStyles();
+
+  const layer=parcelLayersById.get(pid);
+  if(layer){
+    layer.closePopup();
+    layer.openPopup();
+  }
+}
+
+function unassignParcel(pid){
+  const a=assignmentMap().get(pid) || {};
+  const addr=(a.SitusStNo+" "+a.SitusStName).trim();
+  if(!confirm(`Remove ${pid}${addr ? " — "+addr : ""} from this route? It will remain in the assignment as unassigned.`)) return;
+  for(const rt of Object.values(state.routes)){
+    rt.parcels=(rt.parcels||[]).filter(p=>p!==pid);
+  }
+  persist();
+  renderRoutes();
+  renderPreinspection();
+  refreshParcelStyles();
+
+  const layer=parcelLayersById.get(pid);
+  if(layer){
+    layer.closePopup();
+    layer.openPopup();
+  }
+}
+
+function removeParcelFromAssignment(pid){
+  const a=assignmentMap().get(pid) || {};
+  const addr=(a.SitusStNo+" "+a.SitusStName).trim();
+  if(!confirm(`Remove ${pid}${addr ? " — "+addr : ""} from this assignment?`)) return;
+  const parcelKey=value=>String(value??"").trim().toUpperCase();
+  const removedKey=parcelKey(pid);
+  state.assignment=state.assignment.filter(row=>parcelKey(row.PARCELID)!==removedKey);
+  for(const rt of Object.values(state.routes)) rt.parcels=(rt.parcels||[]).filter(p=>parcelKey(p)!==removedKey);
+  for(const rt of Object.values(state.fieldRoutes)) rt.parcels=(rt.parcels||[]).filter(p=>parcelKey(p)!==removedKey);
+  state.fieldUnassigned=(state.fieldUnassigned||[]).filter(p=>parcelKey(p)!==removedKey);
+  delete state.inspections[pid];
+  selected.delete(pid);
+  if(state.parcelGeoJSON) state.parcelGeoJSON.features=state.parcelGeoJSON.features.filter(f=>parcelKey(f.properties.PARCELID)!==removedKey);
+  persist();
+  clearTimeout(workspaceSaveTimer);
+  saveWorkspaceNow();
+  renderRoutes(); renderPreinspection(); renderFieldRoutes(); refreshSelectionUI(); refreshParcelStyles(); updateMapMessage();
+  const layer=parcelLayersById.get(pid);
+  if(layer) parcelLayer.removeLayer(layer);
+  parcelLayersById.delete(pid);
+}
+
+function toggleSelected(pid){
+  if(selected.has(pid)) selected.delete(pid);
+  else selected.add(pid);
+  refreshSelectionUI();
+}
+
+function refreshSelectionUI(){
+  document.getElementById("selectionCount").textContent=selected.size;
+  const assigned=allAssignedSet();
+  let already=0;
+  selected.forEach(p=>{if(assigned.has(p)) already++});
+  document.getElementById("selectionAlready").textContent=already;
+  refreshParcelStyles();
+
+  const m=document.getElementById("selectionMessage");
+  if(already){
+    m.className="warn";
+    m.textContent="Some selected parcels already belong to a route. Saving will move them to the new route.";
+  }else if(selected.size){
+    m.className="ok";
+    m.textContent="Selection is ready to assign.";
+  }else{
+    m.className="";
+    m.textContent="";
+  }
+}
+
+function saveRoute(){
+  const name=document.getElementById("routeName").value.trim();
+  if(!name) return alert("Enter a route name.");
+  if(!selected.size) return alert("Select parcels first.");
+
+  for(const [rtName,rt] of Object.entries(state.routes)){
+    if(rtName !== name){
+      rt.parcels=(rt.parcels||[]).filter(p=>!selected.has(p));
+    }
+  }
+
+  const existing=state.routes[name];
+  const existingParcels=new Set(existing?.parcels || []);
+  selected.forEach(p=>existingParcels.add(p));
+
+  const routeNames=Object.keys(state.routes);
+  const idx=routeNames.indexOf(name);
+  const newBoundary=drawLayer.getLayers()[0]?.toGeoJSON() || null;
+  const boundaries=[...(existing?.boundaries || (existing?.boundary ? [existing.boundary] : []))];
+  if(newBoundary) boundaries.push(newBoundary);
+
+  state.routes[name]={
+    name,
+    color: existing?.color || COLORS[(idx>=0?idx:routeNames.length)%COLORS.length],
+    parcels:[...existingParcels],
+    updated:new Date().toISOString(),
+    boundary:newBoundary || existing?.boundary || null,
+    boundaries
+  };
+
+  selected.clear();
+  drawLayer.clearLayers();
+  persist();
+  renderRoutes();
+  renderPreinspection();
+  refreshSelectionUI();
+  refreshParcelStyles();
+
+  const m=name.match(/^(.*?)(\d+)\s*$/);
+  if(m){
+    document.getElementById("routeName").value=(m[1] || "Route ") + (Number(m[2])+1);
+  }
+}
+
+function deleteRoute(name){
+  if(!confirm(`Delete ${name}? Parcels will become unassigned.`)) return;
+  delete state.routes[name];
+  persist();
+  renderRoutes();
+  renderPreinspection();
+  refreshParcelStyles();
+}
+
+function focusRoute(name){
+  const rt=state.routes[name];
+  if(!rt) return;
+  if((rt.boundaries && rt.boundaries.length) || rt.boundary){
+    const geoms=rt.boundaries?.length ? rt.boundaries : [rt.boundary];
+    const tmp=L.featureGroup(geoms.map(g=>L.geoJSON(g)));
+    const b=tmp.getBounds();
+    if(b.isValid()) map.fitBounds(b.pad(.1));
+  }else{
+    const layers=(rt.parcels||[]).map(p=>parcelLayersById.get(p)).filter(Boolean);
+    if(layers.length){
+      const fg=L.featureGroup(layers);
+      map.fitBounds(fg.getBounds().pad(.1));
+    }
+  }
+}
+
+function renderRoutes(){
+  const box=document.getElementById("routeList");
+  box.innerHTML="";
+  const names=Object.keys(state.routes).sort(routeSort);
+  if(!names.length){
+    box.innerHTML='<div class="help">No routes yet.</div>';
+  }
+  names.forEach(name=>{
+    const rt=state.routes[name];
+    const row=document.createElement("div");
+    row.className="route-row";
+    const flaggedCount=(rt.parcels||[]).filter(pid=>salesForParcel(pid)).length;
+    const salesBadge=flaggedCount ? `<span class="recent-sale-route-badge" title="${flaggedCount} parcel${flaggedCount===1?"":"s"} with a qualifying sale in the current cycle">$ ${flaggedCount}</span>` : "";
+    row.innerHTML=`
+      <div class="route-name-target" data-target-route="${escapeAttr(name)}"><span class="route-swatch" style="background:${rt.color}"></span><b>${escapeHTML(name)}</b><br>
+      <span style="color:var(--muted)">${(rt.parcels||[]).length} parcels${salesBadge}</span></div>
+      <button class="mini" data-focus="${escapeAttr(name)}">View</button>
+      <button class="mini" data-delete="${escapeAttr(name)}">×</button>
+    `;
+    box.appendChild(row);
+  });
+
+  const filter=document.getElementById("preRouteFilter");
+  const current=filter.value;
+  filter.innerHTML='<option value="">All assigned routes</option>';
+  names.forEach(name=>{
+    const opt=document.createElement("option");
+    opt.value=name; opt.textContent=name;
+    filter.appendChild(opt);
+  });
+  if(names.includes(current)) filter.value=current;
+}
+
+function routeSort(a,b){
+  const na=Number((a.match(/\d+/)||["999999"])[0]);
+  const nb=Number((b.match(/\d+/)||["999999"])[0]);
+  return na-nb || a.localeCompare(b);
+}
+
+function walkingOrderForRoute(parcels){
+  const amap=assignmentMap();
+  const rows=parcels.map(p=>amap.get(p)).filter(Boolean).map(a=>({
+    ...a, n:Number((String(a.SitusStNo).match(/^\s*(\d+)/)||["999999"])[0])
+  }));
+  const groups=new Map();
+  rows.forEach(r=>{
+    if(!groups.has(r.SitusStName)) groups.set(r.SitusStName,[]);
+    groups.get(r.SitusStName).push(r);
+  });
+
+  const ordered=[];
+  [...groups.keys()].sort().forEach(st=>{
+    const g=groups.get(st);
+    const evens=g.filter(r=>r.n!==999999 && r.n%2===0).sort((a,b)=>a.n-b.n);
+    const odds=g.filter(r=>r.n!==999999 && r.n%2===1).sort((a,b)=>b.n-a.n);
+    const other=g.filter(r=>r.n===999999);
+    ordered.push(...evens,...odds,...other);
+  });
+  return ordered;
+}
+
+function printRouteSheet(sheetType){
+  const isFieldSheet=sheetType==="field";
+  let routeName="";
+  let rows=[];
+  if(isFieldSheet){
+    routeName=state.activeFieldRoute;
+    const route=state.fieldRoutes[routeName];
+    if(!route){alert("Select a field route before printing.");return;}
+    rows=(route.parcels||[]).map(pid=>assignmentMap().get(pid)).filter(Boolean);
+  }else{
+    routeName=document.getElementById("preRouteFilter").value;
+    const route=state.routes[routeName];
+    if(!routeName || !route){alert("Select one preinspection route before printing.");return;}
+    rows=walkingOrderForRoute(route.parcels||[]);
+  }
+  if(!rows.length){alert("This route has no parcels to print.");return;}
+  const printRoot=document.getElementById("routingPrintSheet");
+  const heading=isFieldSheet?"CAMA field inspection sheet":"CAMA preinspection route sheet";
+  const records=rows.map((parcel,index)=>{
+    const pid=String(parcel.PARCELID||"");
+    const inspectionData=inspection(pid);
+    const fieldFlag=isFieldSheet || inspectionData.changes==="yes" ? "YES — FIELD INSPECTION" : inspectionData.changes==="no" ? "No" : "";
+    const address=parcelAddress(parcel);
+    return `<tr><td>${index+1}</td><td>${escapeHTML(pid)}</td><td>${escapeHTML(address)}</td><td>${escapeHTML(fieldFlag)}</td><td class="print-notes">${escapeHTML(inspectionData.notes||"")}</td></tr>`;
+  }).join("");
+  printRoot.innerHTML=`<h1>${heading}</h1><div class="print-meta"><strong>${escapeHTML(routeName)}</strong> · ${rows.length} parcels · Workspace year ${escapeHTML(state.year)} · Printed ${new Date().toLocaleDateString()}</div><table><thead><tr><th style="width:7%">Order</th><th style="width:19%">Parcel ID</th><th style="width:25%">Address</th><th style="width:20%">Field inspection</th><th>Notes / comments</th></tr></thead><tbody>${records}</tbody></table>`;
+  printRoot.hidden=false;
+  const cleanup=()=>{printRoot.hidden=true;printRoot.innerHTML="";};
+  window.addEventListener("afterprint",cleanup,{once:true});
+  window.print();
+}
+
+
+function skagitPhotoUrl(pid){
+  return "https://www.skagitcounty.net/Search/Property/ViewPic.aspx?id=" + encodeURIComponent(pid);
+}
+
+function skagitPhotoImageUrl(pid){
+  const digits=String(pid||"").replace(/\D/g,"");
+  const folder=digits.slice(-2).padStart(2,"0");
+  return "https://www.skagitcounty.net/Assessor/Images/Photos/" + folder + "/" + encodeURIComponent(pid) + ".jpg";
+}
+
+let streetSmartSdkPromise=null;
+const streetSmartScriptPromises=new Map();
+const streetSmartRecordingCache=new Map();
+const STREETSMART_RECORDING_CACHE_TTL=5*60*1000;
+const STREETSMART_SESSION_IDLE_TTL=10*60*1000;
+const streetSmartSession={api:null,initPromise:null,configKey:"",host:null,idleTimer:null,lastUsedAt:0};
+function streetSmartSessionHost(target){
+  if(!streetSmartSession.host){
+    streetSmartSession.host=document.createElement("div");
+    streetSmartSession.host.className="streetsmart-session-host";
+  }
+  if(streetSmartSession.host.parentElement!==target)target.appendChild(streetSmartSession.host);
+  return streetSmartSession.host;
+}
+function loadStreetSmartScript(src){
+  if(streetSmartScriptPromises.has(src))return streetSmartScriptPromises.get(src);
+  const existing=[...document.scripts].find(script=>script.src===src);
+  if(existing){
+    const promise=existing.dataset.loaded==="true"?Promise.resolve():new Promise((resolve,reject)=>{existing.addEventListener("load",resolve,{once:true});existing.addEventListener("error",()=>reject(new Error("StreetSmart viewer library failed to load.")),{once:true});});
+    streetSmartScriptPromises.set(src,promise);
+    return promise;
+  }
+  const promise=new Promise((resolve,reject)=>{
+    const script=document.createElement("script");
+    script.src=src;
+    script.async=false;
+    script.onload=()=>{script.dataset.loaded="true";resolve();};
+    script.onerror=()=>reject(new Error("StreetSmart viewer library failed to load."));
+    document.head.appendChild(script);
+  });
+  streetSmartScriptPromises.set(src,promise);
+  return promise;
+}
+function loadStreetSmartSdk(){
+  if(window.StreetSmartApi)return Promise.resolve(window.StreetSmartApi);
+  if(streetSmartSdkPromise)return streetSmartSdkPromise;
+  const scripts=[
+    "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+    "https://streetsmart.cyclomedia.com/api/v26.1/StreetSmartApi.js"
+  ];
+  streetSmartSdkPromise=(async()=>{
+    for(const src of scripts)await loadStreetSmartScript(src);
+    if(!window.StreetSmartApi)throw new Error("StreetSmart viewer library did not initialize.");
+    return window.StreetSmartApi;
+  })().catch(error=>{streetSmartSdkPromise=null;throw error;});
+  return streetSmartSdkPromise;
+}
+function scheduleStreetSmartSessionTeardown(){
+  clearTimeout(streetSmartSession.idleTimer);
+  streetSmartSession.idleTimer=window.setTimeout(()=>{
+    if(!streetSmartSession.api || Date.now()-streetSmartSession.lastUsedAt<STREETSMART_SESSION_IDLE_TTL)return;
+    try{streetSmartSession.api.destroy?.({targetElement:streetSmartSession.host,loginOauth:false});}catch(error){console.warn("StreetSmart session teardown failed:",error.message);}
+    streetSmartSession.api=null;
+    streetSmartSession.initPromise=null;
+    streetSmartSession.configKey="";
+    streetSmartSession.host=null;
+  },STREETSMART_SESSION_IDLE_TTL);
+}
+async function ensureStreetSmartSession(api,config,spatialReference,target){
+  const configKey=[config.api_key,config.username,spatialReference].join("|");
+  if(streetSmartSession.initPromise && streetSmartSession.configKey===configKey){
+    streetSmartSession.lastUsedAt=Date.now();
+    scheduleStreetSmartSessionTeardown();
+    return streetSmartSession.initPromise;
+  }
+  if(streetSmartSession.api && streetSmartSession.configKey!==configKey){
+    try{streetSmartSession.api.destroy?.({targetElement:streetSmartSession.host,loginOauth:false});}catch(error){}
+    streetSmartSession.api=null;
+    streetSmartSession.initPromise=null;
+  }
+  streetSmartSession.configKey=configKey;
+  streetSmartSession.host=streetSmartSessionHost(target);
+  streetSmartSession.initPromise=api.init({targetElement:streetSmartSession.host,username:config.username,password:config.password,loginOauth:false,apiKey:config.api_key,srs:spatialReference,locale:"en-US"}).then(()=>{
+    streetSmartSession.api=api;
+    streetSmartSession.lastUsedAt=Date.now();
+    scheduleStreetSmartSessionTeardown();
+    return api;
+  }).catch(error=>{streetSmartSession.initPromise=null;streetSmartSession.configKey="";throw error;});
+  return streetSmartSession.initPromise;
+}
+
+function closeStreetSmartCompare(options={}){
+  if(streetsmartCleanup){
+    const cleanup=streetsmartCleanup;
+    streetsmartCleanup=null;
+    cleanup(options);
+  }else{
+    document.getElementById("streetsmartCompare")?.remove();
+  }
+}
+
+async function openStreetSmartCompare(pid){
+  closeStreetSmartCompare({quiet:true});
+  setActiveParcel(pid);
+  paintActiveParcelInDom(pid);
+  const assignment=assignmentMap().get(pid) || {};
+  const modal=document.createElement("div");
+  modal.id="streetsmartCompare";
+  modal.className="streetsmart-compare";
+  modal.innerHTML=`<div class="streetsmart-head"><b>${escapeHTML(pid)} · image review</b><div class="streetsmart-view-group" aria-label="StreetSmart controls"><button type="button" data-streetsmart-step="-1" disabled title="Move to previous StreetSmart capture">‹ Previous</button><button type="button" data-streetsmart-step="1" disabled title="Move to next StreetSmart capture">Next ›</button><button type="button" data-streetsmart-view="zoom-out" disabled title="Zoom out">−</button><span class="streetsmart-view-label" id="streetsmartViewLabel">90°</span><button type="button" data-streetsmart-view="zoom-in" disabled title="Zoom in">+</button></div><button type="button" class="primary" id="streetsmartSave" disabled>Save StreetSmart JPG</button><button type="button" class="close" id="streetsmartClose" aria-label="Close StreetSmart comparison">×</button></div><div class="streetsmart-meta"><span id="streetsmartRecordingMeta">StreetSmart imagery will load here.</span><span id="streetsmartViewMeta">Drag to look around · scroll to zoom · Previous/Next moves between nearby captures</span><span class="streetsmart-status" id="streetsmartStatus" role="status"></span></div><div class="streetsmart-notes"><label for="streetsmartNotes">Notes</label><input id="streetsmartNotes" type="text" value="${escapeAttr(inspection(pid).notes||"")}" placeholder="Quick observation…" autocomplete="off"></div><div class="streetsmart-body"><section class="streetsmart-pane"><h3>Assessor static image</h3><div class="streetsmart-image-wrap"><img src="${escapeAttr(skagitPhotoImageUrl(pid))}" alt="Skagit County property photo ${escapeAttr(pid)}"></div></section><section class="streetsmart-pane"><h3>StreetSmart interactive panorama</h3><div class="streetsmart-image-wrap"><div class="streetsmart-viewer-mount" id="streetsmartViewer"></div><div class="streetsmart-loading-indicator" id="streetsmartLoadingIndicator" role="status"><span class="streetsmart-spinner" aria-hidden="true"></span><span>Loading StreetSmart viewer…</span></div><div class="streetsmart-placeholder" id="streetsmartPlaceholder">Connecting to StreetSmart…</div></div></section></div>`;
+  document.body.appendChild(modal);
+  const viewerMount=document.getElementById("streetsmartViewer");
+  streetSmartSessionHost(viewerMount);
+  const placeholder=document.getElementById("streetsmartPlaceholder");
+  const loadingIndicator=document.getElementById("streetsmartLoadingIndicator");
+  const status=document.getElementById("streetsmartStatus");
+  const recordingMeta=document.getElementById("streetsmartRecordingMeta");
+  const viewMeta=document.getElementById("streetsmartViewMeta");
+  const viewLabel=document.getElementById("streetsmartViewLabel");
+  const saveButton=document.getElementById("streetsmartSave");
+  const captureButtons=[...modal.querySelectorAll("[data-streetsmart-step]")];
+  const viewButtons=[...modal.querySelectorAll("[data-streetsmart-view]")];
+  const notesInput=document.getElementById("streetsmartNotes");
+  let recordingId="";
+  let recordingDate="";
+  const cachedRecording=streetSmartRecordingCache.get(String(pid));
+  if(cachedRecording && cachedRecording.expiresAt>Date.now()){recordingId=cachedRecording.recordingId;recordingDate=cachedRecording.recordingDate||"";}
+  else streetSmartRecordingCache.delete(String(pid));
+  let yaw=0;
+  let pitch=0;
+  let hfov=90;
+  let srs="2926";
+  let viewer=null;
+  let viewerConfig=null;
+  let viewerReady=false;
+  let closed=false;
+
+  const setStatus=(message,error=false)=>{status.textContent=message;status.style.color=error?"var(--red-text)":"var(--muted)";};
+  const getCurrentRecording=()=>viewer?.getRecording?.() || {};
+  const getCurrentOrientation=()=>viewer?.getOrientation?.() || {yaw,pitch,hFov:hfov};
+  const readRecordingId=recording=>String(recording?.imageId||recording?.imageID||recording?.imageid||recording?.image_id||recording?.ImageId||recording?.ImageID||recording?.recordingId||recording?.RecordingId||recording?.recording_id||recording?.id||recording?.getImageId?.()||"");
+  const updateRecordingMeta=recordingOverride=>{
+    if(!viewer)return;
+    const recording=recordingOverride||getCurrentRecording();
+    const nextRecordingId=readRecordingId(recording);
+    if(nextRecordingId)recordingId=nextRecordingId;
+    recordingDate=recording?.recordedAt||recording?.recordingDate||recording?.recording_date||recording?.date||recordingDate;
+    if(recordingId)streetSmartRecordingCache.set(String(pid),{recordingId,recordingDate,expiresAt:Date.now()+STREETSMART_RECORDING_CACHE_TTL});
+    recordingMeta.textContent=recordingId?`Recording ${recordingId}${recordingDate?` · ${recordingDate}`:""}`:"StreetSmart panorama loaded";
+    saveButton.disabled=!viewerReady || !recordingId;
+  };
+  const updateViewerOrientation=()=>{
+    if(!viewer)return;
+    const orientation=getCurrentOrientation();
+    yaw=Number(orientation.yaw)||0;
+    pitch=Number(orientation.pitch)||0;
+    hfov=Number(orientation.hFov ?? orientation.hfov)||90;
+    updateViewMeta();
+  };
+  const updateViewMeta=()=>{
+    viewLabel.textContent=`${Math.round(hfov)}°`;
+    viewMeta.textContent="Drag image left/right to look around · scroll to zoom";
+  };
+  const setViewControlsEnabled=enabled=>[...viewButtons,...captureButtons].forEach(button=>button.disabled=!enabled);
+  const activateViewerForCaptureNavigation=()=>{
+    // StreetSmart only processes its documented arrow-key navigation shortcut
+    // while the pointer is over its interaction catcher. The toolbar sits
+    // outside that surface, so re-activate the viewer before forwarding keys.
+    const surface=viewerMount.querySelector("canvas, .ol-viewport, [role='application']")||viewerMount.firstElementChild||viewerMount;
+    surface.dispatchEvent(new MouseEvent("mouseover",{bubbles:true,clientX:Math.round(surface.getBoundingClientRect().left+surface.getBoundingClientRect().width/2),clientY:Math.round(surface.getBoundingClientRect().top+surface.getBoundingClientRect().height/2)}));
+  };
+  const dispatchCaptureNavigationKey=keyCode=>{
+    const key=keyCode===37?"ArrowLeft":"ArrowRight";
+    const event=new KeyboardEvent("keydown",{key,code:key,keyCode,which:keyCode,bubbles:true,cancelable:true});
+    // Chromium may expose keyCode as read-only/zero for constructed events.
+    try{Object.defineProperty(event,"keyCode",{get:()=>keyCode});}catch{}
+    try{Object.defineProperty(event,"which",{get:()=>keyCode});}catch{}
+    document.dispatchEvent(event);
+  };
+  captureButtons.forEach(button=>button.addEventListener("click",()=>{
+    if(!viewer)return;
+    const direction=Number(button.dataset.streetsmartStep);
+    const keyCode=direction<0?37:39;
+    activateViewerForCaptureNavigation();
+    dispatchCaptureNavigationKey(keyCode);
+  }));
+  viewButtons.forEach(button=>button.addEventListener("click",()=>{
+    if(!viewer)return;
+    const action=button.dataset.streetsmartView;
+    if(action==="zoom-in")viewer.zoomIn();
+    if(action==="zoom-out")viewer.zoomOut();
+  }));
+  saveButton.addEventListener("click",async()=>{
+    if(!viewerReady || !recordingId)return;
+    saveButton.disabled=true;
+    setStatus("Saving high-resolution JPG…");
+    try{
+      const orientation=getCurrentOrientation();
+      const response=await fetch(`/routing/parcel/${encodeURIComponent(pid)}/streetsmart/save/`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":csrf()},body:JSON.stringify({recording_id:recordingId,yaw:Number(orientation.yaw)||yaw,pitch:Number(orientation.pitch)||pitch,hfov:Number(orientation.hFov ?? orientation.hfov)||hfov,srs})});
+      if(!response.ok){
+        const payload=await response.json().catch(()=>({}));
+        throw new Error(payload.error || "The StreetSmart image could not be generated.");
+      }
+      const image=await response.blob();
+      const url=URL.createObjectURL(image);
+      const link=document.createElement("a");
+      link.href=url;
+      link.download=`${pid}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setStatus(`Saved ${pid}.jpg`);
+    }catch(error){setStatus(error.message || "Save failed",true);}
+    saveButton.disabled=!viewerReady || !recordingId;
+  });
+  const close=options=>{
+    if(closed)return;
+    closed=true;
+    if(streetsmartCleanup===close)streetsmartCleanup=null;
+    saveInspectionNotes(pid,notesInput.value);
+    if(viewer){
+      try{window.StreetSmartApi?.closeViewer?.(viewer.getId?.());}catch(error){}
+    }
+    viewer=null;
+    streetSmartSession.lastUsedAt=Date.now();
+    scheduleStreetSmartSessionTeardown();
+    document.removeEventListener("keydown",onKey);
+    modal.remove();
+    renderPreinspection();
+    if(!options?.quiet)requestAnimationFrame(()=>restoreActiveParcel({pulse:true}));
+  };
+  const onKey=event=>{if(event.key==="Escape")close({});};
+  notesInput.addEventListener("input",()=>saveInspectionNotes(pid,notesInput.value));
+  notesInput.addEventListener("change",()=>saveInspectionNotes(pid,notesInput.value));
+  document.getElementById("streetsmartClose").addEventListener("click",()=>close({}));
+  document.addEventListener("keydown",onKey);
+  streetsmartCleanup=close;
+
+  const startedAt=performance.now();
+  const timings={};
+  let timingReported=false;
+  let viewLoadReported=false;
+  const reportReady=()=>{
+    if(timingReported)return;
+    timingReported=true;
+    const totalMs=Math.round(performance.now()-startedAt);
+    console.info("[StreetSmart load timing]",{parcel_id:pid,...timings,time_to_ready_ms:totalMs});
+    setStatus(`Ready · ${(totalMs/1000).toFixed(1)}s`);
+  };
+  const query=new URLSearchParams();
+  if(String(assignment.XCoordinate||"").trim() && String(assignment.YCoordinate||"").trim()){
+    query.set("x",String(assignment.XCoordinate).trim());
+    query.set("y",String(assignment.YCoordinate).trim());
+  }
+  try{
+    setStatus("Starting StreetSmart viewer…");
+    const configStartedAt=performance.now();
+    const sdkStartedAt=performance.now();
+    const configPromise=fetch(`/routing/parcel/${encodeURIComponent(pid)}/streetsmart/?${query}`,{credentials:"same-origin"})
+      .then(async response=>({response,payload:await response.json()}))
+      .then(({response,payload})=>{
+        timings.parcel_config_ms=Math.round(performance.now()-configStartedAt);
+        if(!response.ok || !payload.available)throw new Error(payload.error || "No StreetSmart imagery is available.");
+        return payload;
+      });
+    const sdkPromise=loadStreetSmartSdk().then(api=>{
+      timings.sdk_load_ms=Math.round(performance.now()-sdkStartedAt);
+      return api;
+    });
+    const [payload,api]=await Promise.all([configPromise,sdkPromise]);
+    viewerConfig=payload.viewer_config||null;
+    srs=String(payload.srs || "2926");
+    if(!payload.viewer_config?.api_key || !payload.viewer_config?.username || !payload.viewer_config?.password)throw new Error("StreetSmart API key and Basic-auth credentials are not configured.");
+    if(closed)return;
+    const spatialReference=`EPSG:${srs.replace(/^EPSG:/i,"")}`;
+    const initStartedAt=performance.now();
+    const sessionKey=[payload.viewer_config.api_key,payload.viewer_config.username,spatialReference].join("|");
+    timings.session_reused=Boolean(streetSmartSession.initPromise && streetSmartSession.configKey===sessionKey);
+    await ensureStreetSmartSession(api,payload.viewer_config,spatialReference,viewerMount);
+    timings.init_ms=Math.round(performance.now()-initStartedAt);
+    const captureNavigationShortcut=api.ShortCuts?.ShortcutNames?.movePanoramaWithArrowKeys;
+    if(captureNavigationShortcut)api.ShortCuts?.enableShortcut?.(captureNavigationShortcut);
+    if(closed)return;
+    setStatus("Opening parcel panorama…");
+    const openStartedAt=performance.now();
+    const opened=await api.open({coordinate:[Number(payload.x),Number(payload.y)]},{viewerType:[api.ViewerType.PANORAMA],srs:spatialReference,panoramaViewer:{closable:false,maximizable:false,replace:true,recordingsVisible:true,timeTravelVisible:true,navbarVisible:false}});
+    timings.open_ms=Math.round(performance.now()-openStartedAt);
+    if(closed)return;
+    viewer=Array.isArray(opened)?opened[0]:opened;
+    if(!viewer)throw new Error("StreetSmart did not return a panorama viewer for this location.");
+    viewer.lookAtCoordinate?.([Number(payload.x),Number(payload.y)],spatialReference);
+    const events=api.Events?.panoramaViewer||{};
+    if(events.VIEW_CHANGE)viewer.on?.(events.VIEW_CHANGE,updateViewerOrientation);
+    if(events.IMAGE_CHANGE)viewer.on?.(events.IMAGE_CHANGE,updateRecordingMeta);
+    if(events.RECORDING_LOADED)viewer.on?.(events.RECORDING_LOADED,event=>{
+      const loadedRecording=event?.detail?.recording;
+      updateRecordingMeta(loadedRecording);
+    });
+    if(events.VIEW_LOAD_END)viewer.on?.(events.VIEW_LOAD_END,()=>{
+      loadingIndicator.hidden=true;
+      if(!viewLoadReported){
+        viewLoadReported=true;
+        timings.view_load_end_ms=Math.round(performance.now()-startedAt);
+        console.info("[StreetSmart image timing]",{parcel_id:pid,...timings});
+      }
+      if(recordingId)reportReady();
+    });
+    viewerReady=true;
+    setViewControlsEnabled(true);
+    placeholder.hidden=true;
+    updateRecordingMeta();
+    updateViewerOrientation();
+    setStatus(recordingId?`Viewer opened · ${((performance.now()-startedAt)/1000).toFixed(1)}s`:"Loading panorama…");
+    if(recordingId){loadingIndicator.hidden=true;reportReady();}
+    else{
+      let attempts=0;
+      const recordingPoll=setInterval(()=>{
+        if(closed || recordingId || ++attempts>=100){
+          clearInterval(recordingPoll);
+          if(!closed){
+            updateRecordingMeta();
+            loadingIndicator.hidden=true;
+            if(recordingId)reportReady();
+            else setStatus("Panorama loaded, but recording details are unavailable. Saving is disabled.",true);
+          }
+          return;
+        }
+        updateRecordingMeta();
+        if(recordingId){clearInterval(recordingPoll);loadingIndicator.hidden=true;reportReady();}
+      },300);
+    }
+  }catch(error){
+    if(closed)return;
+    let message=String(error.message || "StreetSmart imagery is unavailable.");
+    for(const secret of [viewerConfig?.api_key,viewerConfig?.username,viewerConfig?.password].filter(Boolean))message=message.split(secret).join("[redacted]");
+    placeholder.hidden=false;
+    placeholder.textContent=message;
+    loadingIndicator.hidden=true;
+    setStatus("Unavailable",true);
+  }
+}
+
+function closeImageryCompare(options={}){
+  if(imageryCleanup){
+    const cleanup=imageryCleanup;
+    imageryCleanup=null;
+    cleanup(options);
+  }else{
+    document.getElementById("imageryCompare")?.remove();
+  }
+}
+
+function saveInspectionNotes(pid,value){
+  const notes=String(value ?? "");
+  inspection(pid).notes=notes;
+  persist();
+  document.querySelectorAll("textarea[data-pid]").forEach(field=>{
+    if(field.dataset.pid === pid && field.value !== notes) field.value=notes;
+  });
+}
+
+function openImageryCompare(pid){
+  document.getElementById("imageryCompare")?.remove();
+  const modal=document.createElement("div");
+  modal.id="imageryCompare";
+  modal.className="imagery-compare";
+  modal.innerHTML=`<div class="imagery-compare-head"><b>${escapeHTML(pid)}</b><div class="imagery-header-actions"><div class="imagery-sketch-control" id="imagerySketchControl"><button type="button" id="sketchToggle">Show sketch</button></div><button type="button" id="imageryClose">×</button></div></div><div class="imagery-notes-bar"><label for="imageryNotes">Notes</label><input id="imageryNotes" type="text" value="${escapeAttr(inspection(pid).notes||"")}" placeholder="Quick observation…" autocomplete="off"></div><div class="imagery-compare-body"><div class="imagery-pane"><h3>Current · 2025</h3><div class="imagery-map" id="imageryCurrent"></div></div><div class="imagery-pane"><h3>Historical · 2019</h3><div class="imagery-map" id="imageryHistoric"></div></div><div class="imagery-sketch-rail" id="imagerySketchRail" aria-label="Sketch alignment tools"><button type="button" data-sketch-action="rotate-left" title="Rotate sketch left 15 degrees">↶</button><button type="button" data-sketch-action="rotate-right" title="Rotate sketch right 15 degrees">↷</button><label>Rotate <input id="sketchRotation" type="range" min="-180" max="180" step="1" value="0"><span class="imagery-sketch-value" id="sketchRotationValue">0°</span></label><button type="button" data-sketch-action="scale-down" title="Make sketch smaller">−</button><button type="button" data-sketch-action="scale-up" title="Make sketch larger">+</button><label>Opacity <input id="sketchOpacity" type="range" min="0.15" max="1" step="0.05" value="0.55"></label><button type="button" data-sketch-action="reset" title="Reset sketch alignment">Reset</button></div></div>`;
+  document.body.appendChild(modal);
+  const parcelLayer=parcelLayersById.get(pid);
+  const parcelCenter=parcelLayer ? parcelLayer.getBounds().getCenter() : null;
+  const center=parcelCenter ? [parcelCenter.lat,parcelCenter.lng] : [48.42,-122.33];
+  const current=L.map("imageryCurrent",{zoomControl:true}).setView(center,18);
+  const historic=L.map("imageryHistoric",{zoomControl:true}).setView(center,18);
+  current.createPane("sketchPane");
+  historic.createPane("sketchPane");
+  current.getPane("sketchPane").style.zIndex=650;
+  historic.getPane("sketchPane").style.zIndex=650;
+  const outlineStyle={color:"#ffe600",weight:3,opacity:1,fill:false};
+  const parcelGeo=parcelLayer && parcelLayer.toGeoJSON ? parcelLayer.toGeoJSON() : null;
+  let sketchOverlay=null;
+  let sketchMap=null;
+  let activeSketchMap=current;
+  let sketchOffset={x:0,y:0};
+  const sketchControl=document.getElementById("imagerySketchControl");
+  const sketchRail=document.getElementById("imagerySketchRail");
+  const sketchButton=document.getElementById("sketchToggle");
+  const sketchOpacity=document.getElementById("sketchOpacity");
+  const sketchRotationInput=document.getElementById("sketchRotation");
+  const sketchRotationValue=document.getElementById("sketchRotationValue");
+  let sketchRotation=0;
+  let sketchScaleValue=1;
+  sketchControl.classList.add("visible");
+  if(parcelGeo){
+    L.geoJSON(parcelGeo,{style:outlineStyle,interactive:true}).addTo(current).on("click",()=>{activeSketchMap=current;toggleSketch(current);});
+    L.geoJSON(parcelGeo,{style:outlineStyle,interactive:true}).addTo(historic).on("click",()=>{activeSketchMap=historic;toggleSketch(historic);});
+  }
+  async function toggleSketch(targetMap){
+    if(!(targetMap instanceof L.Map)) targetMap=activeSketchMap || current;
+    activeSketchMap=targetMap;
+    if(sketchOverlay && sketchMap===targetMap){targetMap.removeLayer(sketchOverlay);sketchOverlay=null;sketchMap=null;sketchRail.classList.remove("visible");sketchButton.textContent="Show sketch";return;}
+    if(sketchOverlay && sketchMap){sketchMap.removeLayer(sketchOverlay);sketchOverlay=null;sketchMap=null;}
+    sketchButton.disabled=true;
+    sketchButton.textContent="Loading…";
+    try{
+      const response=await fetch(`/routing/parcel/${encodeURIComponent(pid)}/sketch/`);
+      const payload=await response.json();
+      if(!response.ok || !payload.found) throw new Error("No assessor sketch found");
+      const bounds=parcelLayer ? parcelLayer.getBounds() : targetMap.getBounds();
+      sketchMap=targetMap;
+      sketchOffset={x:0,y:0};
+      sketchOverlay=L.imageOverlay(payload.image_url || payload.url,bounds,{opacity:Number(sketchOpacity.value),interactive:false,crossOrigin:true,pane:"sketchPane"}).addTo(targetMap);
+      sketchOverlay.setZIndex(10000);
+      sketchOverlay.once("load",applySketchTransform);
+      sketchRail.classList.add("visible");
+      sketchControl.classList.add("visible");
+      sketchButton.textContent="Hide sketch";
+    }catch(error){alert(error.message || "The assessor sketch could not be loaded.");sketchButton.textContent="Show sketch";}
+    sketchButton.disabled=false;
+  }
+  function applySketchTransform(){
+    const image=sketchOverlay?.getElement();
+    if(!image)return;
+    image.style.mixBlendMode="multiply";
+    image.style.filter="grayscale(1) contrast(1.35)";
+    image.style.transformOrigin="center center";
+    image.style.translate=`${sketchOffset.x}px ${sketchOffset.y}px`;
+    image.style.rotate=`${sketchRotation}deg`;
+    image.style.scale=String(sketchScaleValue);
+    image.style.cursor="grab";
+    image.style.pointerEvents="auto";
+    if(image.dataset.dragReady)return;
+    image.dataset.dragReady="true";
+    let dragging=false;
+    let startX=0;
+    let startY=0;
+    image.addEventListener("pointerdown",event=>{
+      dragging=true; startX=event.clientX-sketchOffset.x; startY=event.clientY-sketchOffset.y;
+      image.style.cursor="grabbing"; image.setPointerCapture?.(event.pointerId);
+      event.preventDefault(); event.stopPropagation();
+    });
+    image.addEventListener("pointermove",event=>{
+      if(!dragging)return;
+      sketchOffset={x:event.clientX-startX,y:event.clientY-startY};
+      applySketchTransform();
+      event.preventDefault(); event.stopPropagation();
+    });
+    const stopDragging=event=>{
+      if(!dragging)return;
+      dragging=false; image.style.cursor="grab"; image.releasePointerCapture?.(event.pointerId);
+      event.preventDefault(); event.stopPropagation();
+    };
+    image.addEventListener("pointerup",stopDragging);
+    image.addEventListener("pointercancel",stopDragging);
+  }
+  sketchRail.addEventListener("click",e=>{
+    const action=e.target.closest("[data-sketch-action]")?.dataset.sketchAction;
+    if(!action)return;
+    if(action==="rotate-left")sketchRotation=Math.max(-180,sketchRotation-15);
+    if(action==="rotate-right")sketchRotation=Math.min(180,sketchRotation+15);
+    if(action==="scale-down")sketchScaleValue=Math.max(.5,Math.round((sketchScaleValue-.1)*10)/10);
+    if(action==="scale-up")sketchScaleValue=Math.min(2,Math.round((sketchScaleValue+.1)*10)/10);
+    if(action==="reset"){sketchRotation=0;sketchOffset={x:0,y:0};sketchScaleValue=1;sketchOpacity.value="0.55";if(sketchOverlay)sketchOverlay.setOpacity(.55);}
+    sketchRotationInput.value=String(sketchRotation);
+    sketchRotationValue.textContent=`${sketchRotation}°`;
+    applySketchTransform();
+  });
+  sketchButton.addEventListener("click",()=>toggleSketch(activeSketchMap || current));
+  sketchOpacity.addEventListener("input",()=>{if(sketchOverlay)sketchOverlay.setOpacity(Number(sketchOpacity.value));});
+  sketchRotationInput.addEventListener("input",()=>{sketchRotation=Number(sketchRotationInput.value);sketchRotationValue.textContent=`${sketchRotation}°`;applySketchTransform();});
+  let syncing=false;
+  const syncMaps=(source,target)=>{
+    source.on("moveend zoomend",()=>{
+      if(syncing)return;
+      syncing=true;
+      target.setView(source.getCenter(),source.getZoom(),{animate:false});
+      syncing=false;
+    });
+  };
+  syncMaps(current,historic);
+  syncMaps(historic,current);
+  const pictometryBase="https://svc.pictometry.com/Image/36AB6FD9-8DC8-3133-7871-1347FB79B3E8/wmts";
+  const aerialLayer=(url,attribution,maxZoom)=>L.tileLayer(url,{tileSize:256,maxZoom,updateWhenZooming:false,keepBuffer:2,attribution});
+  const currentAerial=aerialLayer(`${pictometryBase}/PICT-WASKAG25-qSfR3O1lit/default/GoogleMapsCompatible/{z}/{x}/{y}.png`,"Pictometry/Cyclomedia · 2025",22).addTo(current);
+  const historicalAerial=aerialLayer("https://geo.skagitcountywa.gov/server/rest/services/Images/SkagitCounty2019_9inch/ImageServer/tile/{z}/{y}/{x}","Skagit County GIS · 2019",21).addTo(historic);
+  requestAnimationFrame(()=>{
+    current.invalidateSize(false);
+    historic.invalidateSize(false);
+  });
+  if(parcelCenter){
+    L.marker(center).addTo(current);
+    L.marker(center).addTo(historic);
+  }
+  const close=(options={})=>{
+    if(imageryCleanup===close) imageryCleanup=null;
+    const notesInput=document.getElementById("imageryNotes");
+    if(notesInput) saveInspectionNotes(pid,notesInput.value);
+    document.removeEventListener("keydown",onKey);
+    modal.remove();
+    try{current.remove();}catch(e){}
+    try{historic.remove();}catch(e){}
+    renderPreinspection();
+    if(!options.quiet) requestAnimationFrame(()=>restoreActiveParcel({pulse:true}));
+  };
+  imageryCleanup=close;
+  const onKey=e=>{if(e.key==="Escape")close();};
+  const notesInput=document.getElementById("imageryNotes");
+  ["input","change","blur"].forEach(eventName=>notesInput.addEventListener(eventName,()=>saveInspectionNotes(pid,notesInput.value)));
+  document.getElementById("imageryClose").setAttribute("aria-label","Close aerial comparison");
+  document.addEventListener("keydown",onKey);
+}
+
+function googleSearchUrl(query){
+  return "https://www.google.com/search?q=" + encodeURIComponent(String(query||"Skagit County, WA").trim());
+}
+
+function openGoogleSearchPreview(address,pid){
+  window.open(googleSearchUrl(address||"Skagit County, WA"),"_blank","noopener,noreferrer");
+}
+
+function parcelAddress(a){
+  const number=String(a.SitusStNo||"").trim();
+  const street=String(a.SitusStName||"").trim();
+  const csz=String(a.SitusCSZ||"").trim();
+  return [number,street,csz].filter(Boolean).join(", ").replace(/\s+/g," ").trim();
+}
+
+const salesCycleUrl="/routing/sales-cycle/";
+const SALES_CHECK_CACHE_KEY=`${USER_CACHE_KEY}-sales-cycle-v1`;
+let recentSales={};
+let salesLookupInFlight=null;
+let salesCheckState=loadSalesCheckState();
+
+function salesLocalDate(){
+  const now=new Date();
+  return [now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
+}
+
+function salesAssignmentFingerprint(ids){return JSON.stringify([...ids].map(pid=>String(pid).trim().toUpperCase()).sort());}
+
+function loadSalesCheckState(){
+  try{
+    const raw=localStorage.getItem(SALES_CHECK_CACHE_KEY);
+    const parsed=raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed==="object" ? parsed : {};
+  }catch(error){return {};}
+}
+
+function saveSalesCheckState(){try{localStorage.setItem(SALES_CHECK_CACHE_KEY,JSON.stringify(salesCheckState));}catch(error){}}
+
+function setSalesCheckStatus(kind,message){
+  const element=document.getElementById("salesCheckStatus");
+  if(!element)return;
+  element.className=`sales-check-status${kind==="error"?" is-error":""}${kind==="success"?" is-success":""}`;
+  element.textContent=message;
+  element.title=message;
+}
+
+function salesForParcel(pid){return recentSales[String(pid||"").trim().toUpperCase()] || null;}
+
+async function refreshRecentSales({force=false}={}){
+  const ids=[...new Set(state.assignment.map(a=>String(a.PARCELID||"").trim()).filter(Boolean))];
+  if(!ids.length){recentSales={};setSalesCheckStatus("","Sales check waits for an assignment");renderPreinspection();return;}
+  const fingerprint=salesAssignmentFingerprint(ids);
+  const today=salesLocalDate();
+  const cached=salesCheckState.fingerprint===fingerprint ? salesCheckState : {};
+  recentSales=cached.parcels||{};
+  if(!force && cached.lastAttemptDate===today){
+    setSalesCheckStatus(cached.status==="error"?"error":cached.status==="success"?"success":"",cached.status==="error" ? `Sales check unavailable; last checked ${today}` : `Sales checked ${today}${Object.keys(recentSales).length ? ` · ${Object.keys(recentSales).length} flagged` : ""}`);
+    renderRoutes();
+    renderPreinspection();
+    return;
+  }
+  if(salesLookupInFlight) return salesLookupInFlight;
+  salesCheckState={fingerprint,lastAttemptDate:today,lastSuccessDate:cached.lastSuccessDate||"",status:"pending",error:"",parcels:recentSales,cycleStart:"2026-05-01",cycleEnd:"2027-04-30"};
+  saveSalesCheckState();
+  setSalesCheckStatus("","Checking sales for this assignment…");
+  const params=new URLSearchParams();
+  ids.forEach(pid=>params.append("parcel_id",pid));
+  salesLookupInFlight=fetch(`${salesCycleUrl}?${params.toString()}`,{credentials:"same-origin"})
+    .then(response=>{if(!response.ok) throw new Error("Sales lookup failed");return response.json();})
+    .then(payload=>{
+      recentSales=Object.fromEntries(Object.entries(payload.parcels||{}).map(([pid,sale])=>[String(pid).trim().toUpperCase(),sale]));
+      salesCheckState={...salesCheckState,lastSuccessDate:today,status:"success",error:"",parcels:recentSales,cycleStart:payload.cycle_start||"2026-05-01",cycleEnd:payload.cycle_end||"2027-04-30"};
+      saveSalesCheckState();
+      setSalesCheckStatus("success",`Sales checked ${today}${Object.keys(recentSales).length ? ` · ${Object.keys(recentSales).length} flagged` : ""}`);
+    })
+    .catch(error=>{
+      salesCheckState={...salesCheckState,status:"error",error:String(error.message||"Sales lookup failed"),parcels:recentSales};
+      saveSalesCheckState();
+      setSalesCheckStatus("error",`Sales check unavailable; retry tomorrow`);
+    })
+    .finally(()=>{salesLookupInFlight=null;renderRoutes();renderPreinspection();});
+  return salesLookupInFlight;
+}
+
+async function copyAddress(button,address){
+  const original=button.textContent;
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(address);
+    }else{
+      const helper=document.createElement("textarea");
+      helper.value=address; helper.setAttribute("readonly","");
+      helper.style.position="fixed"; helper.style.opacity="0";
+      document.body.appendChild(helper); helper.select();
+      if(!document.execCommand("copy")) throw new Error("Copy command failed");
+      helper.remove();
+    }
+    button.textContent="Copied";
+    button.classList.add("is-copied");
+    button.setAttribute("aria-label",`Copied address: ${address}`);
+    setTimeout(()=>{button.textContent=original;button.classList.remove("is-copied");button.setAttribute("aria-label",`Copy address: ${address}`);},1400);
+  }catch(error){
+    button.textContent="Copy failed";
+    setTimeout(()=>{button.textContent=original;},1400);
+  }
+}
+
+function assessorPropertyUrl(pid){
+  return "https://www.skagitcounty.net/search/propertym/default.aspx?id=" + encodeURIComponent(pid);
+}
+
+function moneyValue(value){
+  const n=Number(String(value||"").replace(/[$,\s]/g,""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function moneyText(value){
+  const n=moneyValue(value);
+  return n===null ? (value || "—") : n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+}
+
+function propertySnapshot(pid){
+  const a=assignmentMap().get(pid) || {};
+  const assessed=moneyValue(a.AssessedValue);
+  const building=moneyValue(a.BuildingValue);
+  const importedLand=moneyValue(a.LandValue);
+  const derivedLand=assessed!==null && building!==null ? assessed-building : null;
+  const land=importedLand !== null && importedLand > 0 ? importedLand : (derivedLand !== null && derivedLand >= 0 ? derivedLand : importedLand);
+  return `<h4>${escapeHTML(pid)}</h4><table class="snapshot-table"><tr><th>Owner</th><td>${escapeHTML(a.OwnerName || "—")}</td></tr><tr><th>Neighborhood</th><td>${escapeHTML(a.NeighborCode || "—")}</td></tr><tr><th>Building value</th><td>${escapeHTML(moneyText(a.BuildingValue))}</td></tr><tr><th>Assessed value</th><td>${escapeHTML(moneyText(a.AssessedValue))}</td></tr><tr><th>Land value</th><td>${escapeHTML(moneyText(land))}</td></tr></table>`;
+}
+
+function showPropertySnapshot(pid,target){
+  let card=document.getElementById("propertySnapshot");
+  if(!card){card=document.createElement("div");card.id="propertySnapshot";card.className="property-snapshot";document.body.appendChild(card);}
+  card.innerHTML=propertySnapshot(pid);
+  card.classList.add("visible");
+  const rect=target.getBoundingClientRect();
+  const margin=10;
+  const width=card.offsetWidth || 250;
+  const height=card.offsetHeight || 190;
+  const left=Math.max(margin,Math.min(window.innerWidth-width-margin,rect.left));
+  let top=rect.bottom+8;
+  if(top+height>window.innerHeight-margin) top=rect.top-height-8;
+  top=Math.max(margin,Math.min(window.innerHeight-height-margin,top));
+  card.style.left=left + "px";
+  card.style.top=top + "px";
+}
+
+function hidePropertySnapshot(){document.getElementById("propertySnapshot")?.classList.remove("visible");}
+
+function renderPreinspection(){
+  const body=document.getElementById("preBody");
+  const table=document.querySelector(".preinspection-table");
+  const filters=preinspectionFilters();
+
+  table.classList.toggle("cards-mode",preinspectionViewMode==="cards");
+  updatePreinspectionViewToggle();
+  body.innerHTML="";
+  const rows=preinspectionRowsFor(filters);
+  normalizeActiveParcel(rows);
+
+  rows.forEach(row=>{
+    const {a,pid,complete,addr}=row;
+    const s=inspection(pid);
+    const sale=salesForParcel(pid);
+    const salePrice=sale?.latest_sale_price ? `; latest price ${moneyText(sale.latest_sale_price)}` : "";
+    const saleTitle=sale ? `Qualifying sale in current cycle: ${sale.count} sale${sale.count===1?"":"s"}; latest ${sale.latest_sale_date}${salePrice}` : "";
+    const tr=document.createElement("tr");
+    tr.dataset.pid=pid;
+    if(complete) tr.classList.add("complete");
+    if(s.changes==="yes") tr.classList.add("changed");
+    if(pid===state.activeParcel) tr.classList.add("active-parcel");
+    const parcelIdentity=`<span class="parcel-hover" data-parcel-hover="${escapeAttr(pid)}"><b>${escapeHTML(pid)}</b></span>${sale ? `<span class="recent-sale-badge" title="${escapeAttr(saleTitle)}" aria-label="${escapeAttr(saleTitle)}">$</span>` : ""} <a class="parcel-link" href="${assessorPropertyUrl(pid)}" target="_blank" rel="noopener noreferrer" title="Open Skagit County assessor property">↗</a>`;
+    const addressMarkup=`<button class="address-copy" type="button" data-copy-address="${escapeAttr(addr)}" aria-label="Copy address: ${escapeAttr(addr)}" title="Click to copy full address">${escapeHTML(addr || "—")}</button>`;
+    const toolMarkup=`<button class="photo-btn photo-action preinspection-action" type="button" data-photo="${escapeAttr(pid)}" title="Compare assessor photo with StreetSmart" aria-label="Compare assessor photo with StreetSmart">${uiIcon("camera")}</button><button class="photo-btn aerial-action preinspection-action" type="button" data-compare="${escapeAttr(pid)}" title="Compare current and historical aerial imagery" aria-label="Compare current and historical aerial imagery">${uiIcon("layers")}</button><div class="listing-cell"><button class="google-search-btn listing-action" type="button" data-google-search="${escapeAttr(addr||"")}" data-google-search-pid="${escapeAttr(pid)}" title="Search this address on Google" aria-label="Search this address on Google">${uiIcon("search")}</button></div>`;
+    const decisionMarkup=`<div class="change-group"><button class="change-btn yes changes-action ${s.changes==="yes"?"on":""}" data-pid="${escapeAttr(pid)}" data-change="yes">YES</button><button class="change-btn no changes-action ${s.changes==="no"?"on":""}" data-pid="${escapeAttr(pid)}" data-change="no">NO</button></div>`;
+    const notesMarkup=`<textarea data-pid="${escapeAttr(pid)}" placeholder="Notes">${escapeHTML(s.notes||"")}</textarea><button class="unassign-action" type="button" data-unassign="${escapeAttr(pid)}" title="Remove this parcel from the route" aria-label="Remove this parcel from the route">${uiIcon("trash")}</button>`;
+    if(preinspectionViewMode==="cards"){
+      tr.innerHTML=`<td colspan="7"><article class="preinspection-card"><div class="preinspection-card-header">${parcelIdentity}</div><div class="preinspection-card-address">${addressMarkup}</div><div class="preinspection-card-tools" aria-label="Parcel tools">${toolMarkup}</div><div class="preinspection-card-decision"><span class="preinspection-card-decision-label">Changes</span>${decisionMarkup}</div><div class="preinspection-card-notes notes-cell">${notesMarkup}</div></article></td>`;
+    }else tr.innerHTML=`
+        <td>${parcelIdentity}</td>
+        <td>${addressMarkup}</td>
+        <td style="text-align:center">
+          <button class="photo-btn photo-action preinspection-action" type="button" data-photo="${escapeAttr(pid)}" title="Compare assessor photo with StreetSmart" aria-label="Compare assessor photo with StreetSmart">${uiIcon("camera")}</button>
+        </td>
+        <td style="text-align:center">
+          <button class="photo-btn aerial-action preinspection-action" type="button" data-compare="${escapeAttr(pid)}" title="Compare current and historical aerial imagery" aria-label="Compare current and historical aerial imagery">${uiIcon("layers")}</button>
+        </td>
+        <td>
+          <div class="listing-cell">
+            <button class="google-search-btn listing-action" type="button" data-google-search="${escapeAttr(addr||"")}" data-google-search-pid="${escapeAttr(pid)}" title="Search this address on Google" aria-label="Search this address on Google">${uiIcon("search")}</button>
+          </div>
+        </td>
+        <td>${decisionMarkup}</td>
+        <td><div class="notes-cell">${notesMarkup}</div></td>
+      `;
+    body.appendChild(tr);
+  });
+
+  if(!rows.length){
+    body.innerHTML='<tr class="empty-row"><td colspan="7" class="empty">No parcels match the current route/filter.</td></tr>';
+  }
+  document.getElementById("preSummary").textContent=`${rows.length} parcels shown`;
+
+  let scopeTotal=0, scopeComplete=0, scopeField=0;
+  const routeNames=Object.keys(state.routes).sort(routeSort).filter(n=>!filters.route || n===filters.route);
+  routeNames.forEach(rtName=>{
+    (state.routes[rtName]?.parcels || []).forEach(pid=>{
+      scopeTotal++;
+      const s=inspection(pid);
+      if(isComplete(pid)) scopeComplete++;
+      if(s.changes==="yes") scopeField++;
+    });
+  });
+  document.getElementById("preProgress").textContent=`${scopeComplete} / ${scopeTotal} complete`;
+  document.getElementById("fieldSheetCount").textContent=`${scopeField} field sheet${scopeField===1?"":"s"}`;
+  refreshStats();
+}
+
+
+function refreshSetupVisibility(){
+  const setup=document.getElementById("setupSteps");
+  if(!setup) return;
+  const ready=state.assignment.length>0 && !!state.parcelGeoJSON;
+  setup.style.display=ready ? "none" : "block";
+}
+
+function refreshStats(){
+  refreshSetupVisibility();
+  const total=state.assignment.length;
+  const mapped=state.parcelGeoJSON?.features?.length || 0;
+  const assigned=allAssignedSet().size;
+  let complete=0;
+  state.assignment.forEach(a=>{if(isComplete(a.PARCELID)) complete++});
+  document.getElementById("assignmentStat").textContent=`Assignment: ${total}`;
+  document.getElementById("mappedStat").textContent=`Mapped: ${mapped}`;
+  document.getElementById("assignedStat").textContent=`Assigned: ${assigned}`;
+  document.getElementById("unassignedStat").textContent=`Unassigned: ${Math.max(0,total-assigned)}`;
+  document.getElementById("completeStat").textContent=`Preinspected: ${complete}`;
+}
+
+function exportBackup(){
+  download(JSON.stringify(state,null,2),`Skagit_Preinspection_${state.year}_backup.json`,"application/json");
+}
+
+function restoreBackup(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const obj=JSON.parse(r.result);
+      if(!obj.assignment || !obj.routes || !obj.inspections) throw new Error("Invalid workspace file");
+      state=normalizeWorkspaceState(obj);
+      persist();
+      refreshWorkspaceUI();
+      alert("Workspace restored.");
+    }catch(e){ alert("Could not restore backup: "+e.message); }
+  };
+  r.readAsText(file);
+}
+
+function exportProgress(){
+  const rows=[["Route","PARCELID","Address","Aerial","Listing","Changes","Notes","Complete"]];
+  Object.keys(state.routes).sort(routeSort).forEach(rt=>{
+    walkingOrderForRoute(state.routes[rt].parcels||[]).forEach(a=>{
+      const s=inspection(a.PARCELID);
+      rows.push([
+        rt,a.PARCELID,(a.SitusStNo+" "+a.SitusStName).trim(),
+        s.aerial?"Yes":"",s.listing?"Yes":"",
+        s.changes==="yes"?"Yes":s.changes==="no"?"No":"",
+        s.notes||"",isComplete(a.PARCELID)?"Yes":"No"
+      ]);
+    });
+  });
+  const csv=rows.map(r=>r.map(csvEsc).join(",")).join("\r\n");
+  download(csv,`Skagit_Preinspection_${state.year}_progress.csv`,"text/csv");
+}
+
+function csvEsc(v){
+  const s=String(v??"");
+  return /[",\r\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;
+}
+function download(content,name,type){
+  const blob=new Blob([content],{type});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function escapeHTML(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(s){return escapeHTML(s)}
+function uiIcon(name){
+  const paths={
+    camera:'<path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    layers:'<path d="m12 4 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 16l8 4 8-4"/>',
+    external:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6H4V5h6"/>',
+    search:'<circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4.5 4.5"/>',
+    trash:'<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>'
+  };
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name]||""}</svg>`;
+}
+
+/* Events */
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const v=btn.dataset.view;
+    document.getElementById("routesView").classList.toggle("active",v==="routes");
+    document.getElementById("preinspectionView").classList.toggle("active",v==="preinspection");
+    document.getElementById("fieldRoutesView").classList.toggle("active",v==="fieldRoutes");
+    document.querySelector(".statusbar").style.display = v==="routes" ? "flex" : "none";
+    if(v==="routes") setTimeout(()=>map.invalidateSize(),50);
+    if(v==="preinspection") { renderPreinspection(); refreshRecentSales(); }
+    if(v==="fieldRoutes") { renderFieldRoutes(); setTimeout(()=>fieldRouteMap?.invalidateSize(),50); }
+  });
+});
+
+document.getElementById("assignmentFile").addEventListener("change",e=>{
+  const file=e.target.files[0]; if(!file)return;
+  parseAssignmentFile(file).then(rows=>openImportFilterDialog(rows)).then(filteredRows=>{
+    if(!filteredRows){e.target.value="";return;}
+    try{
+      const assignment=normalizeAssignment(filteredRows);
+      if(!assignment.length) throw new Error("No parcels found.");
+      if(state.assignment.length && !confirm("Replace the current assignment? Existing route/inspection data will be kept for matching parcel IDs.")) return;
+      state.assignment=assignment;
+      state.parcelGeoJSON=null;
+      state.routes={};
+      state.fieldRoutes={};
+      state.fieldUnassigned=[];
+      state.activeFieldRoute="";
+      selected.clear();
+      persist();
+      parcelLayer.clearLayers();
+      renderRoutes(); renderPreinspection(); refreshStats(); updateMapMessage();
+      refreshRecentSales();
+      fetchParcelPolygons();
+    }catch(err){ alert(err.message); }
+  }).catch(err=>alert(err.message));
+});
+
+document.getElementById("drawRouteBtn").addEventListener("click",()=>{
+  if(!state.assignment.length) return alert("Step 1: import the annual assignment first.");
+  if(!state.parcelGeoJSON) return alert("Parcel polygons are still loading. Try again in a moment.");
+  drawLayer.clearLayers();
+  selected.clear();
+  refreshSelectionUI();
+  map.pm.enableDraw("Polygon",{
+    snappable:false,
+    snapDistance:5,
+    templineStyle:{color:"#7a4a00",weight:3},
+    hintlineStyle:{color:"#ffd15a",dashArray:[6,6]},
+    pathOptions:{color:"#7a4a00",weight:3,fillColor:"#ffd15a",fillOpacity:.15}
+  });
+});
+document.getElementById("saveRoute").addEventListener("click",saveRoute);
+document.getElementById("clearSelection").addEventListener("click",()=>{
+  selected.clear();drawLayer.clearLayers();refreshSelectionUI();
+});
+document.getElementById("routeList").addEventListener("click",e=>{
+  const target=e.target.closest("[data-target-route]");
+  if(target){
+    document.getElementById("routeName").value=target.dataset.targetRoute;
+  }
+  const f=e.target.dataset.focus,d=e.target.dataset.delete;
+  if(f)focusRoute(f);
+  if(d)deleteRoute(d);
+});
+document.getElementById("exportBackup").addEventListener("click",exportBackup);
+document.getElementById("backupFile").addEventListener("change",e=>{if(e.target.files[0])restoreBackup(e.target.files[0])});
+document.getElementById("exportProgress").addEventListener("click",exportProgress);
+document.getElementById("workspaceSelect").addEventListener("change",async e=>{
+  const id=Number(e.target.value);
+  if(!id || id===workspaceId)return;
+  await saveWorkspaceNow();
+  try{await loadWorkspace({id});}catch(error){workspaceStatus(error.message||"Workspace could not be loaded","error");}
+});
+document.getElementById("newWorkspace").addEventListener("click",async()=>{
+  const name=prompt("Name this workspace:",`Preinspection ${new Date().getFullYear()}`);
+  if(!name?.trim())return;
+  try{await saveWorkspaceNow();await createWorkspace(name.trim());}catch(error){workspaceStatus(error.message||"Workspace could not be created","error");}
+});
+document.getElementById("renameWorkspace").addEventListener("click",async()=>{
+  if(!workspaceId)return;
+  const current=document.getElementById("workspaceSelect").selectedOptions[0]?.textContent?.split(" · ")[0] || "Workspace";
+  const name=prompt("Rename this workspace:",current);
+  if(!name?.trim())return;
+  try{
+    await workspaceRequest(`${WORKSPACE_API}${workspaceId}/`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name.trim()})});
+    const list=await workspaceRequest(WORKSPACE_API);
+    renderWorkspaceControls(list.workspaces||[]);
+    workspaceStatus("Name saved","saved");
+  }catch(error){workspaceStatus(error.message||"Workspace could not be renamed","error");}
+});
+document.getElementById("deleteWorkspace").addEventListener("click",async()=>{
+  if(!workspaceId || !confirm("Delete this workspace permanently? Export a backup first if needed."))return;
+  try{
+    await workspaceRequest(`${WORKSPACE_API}${workspaceId}/state/`,{method:"DELETE"});
+    const list=await workspaceRequest(WORKSPACE_API);
+    if(list.workspaces?.length) await loadWorkspace(list.workspaces[0]);
+    else await createWorkspace("My preinspection workspace");
+  }catch(error){workspaceStatus(error.message||"Workspace could not be deleted","error");}
+});
+document.getElementById("importWorkspace").addEventListener("click",()=>document.getElementById("workspaceBackupFile").click());
+document.getElementById("workspaceBackupFile").addEventListener("change",e=>{if(e.target.files[0])restoreBackup(e.target.files[0]);e.target.value="";});
+document.getElementById("streetSmartSettings").addEventListener("click",openStreetSmartSettings);
+
+document.getElementById("fieldRouteSelect").addEventListener("change",e=>{
+  state.activeFieldRoute=e.target.value;
+  persist();
+  renderFieldRoutes();
+});
+document.getElementById("newFieldRoute").addEventListener("click",()=>{
+  const suggested=`Field Route ${fieldRouteNames().length+1}`;
+  const name=prompt("Name this field route:",suggested);
+  if(!name?.trim()) return;
+  const clean=name.trim();
+  if(state.fieldRoutes[clean]) return alert("That field route already exists.");
+  ensureFieldRoute(clean);
+  state.activeFieldRoute=clean;
+  persist();
+  renderFieldRoutes();
+});
+document.getElementById("copyFieldParcels").addEventListener("click",copyFieldParcelNumbers);
+document.getElementById("printCamaRoute").addEventListener("click",()=>printRouteSheet("preinspection"));
+document.getElementById("printFieldRoute").addEventListener("click",()=>printRouteSheet("field"));
+document.getElementById("deleteFieldRoute").addEventListener("click",()=>{
+  const name=state.activeFieldRoute;
+  if(!name || !state.fieldRoutes[name]) return;
+  if(!confirm(`Delete ${name}? Its parcels will return to the unassigned field pool.`)) return;
+  const route=state.fieldRoutes[name];
+  (route.parcels||[]).forEach(pid=>{if(!state.fieldUnassigned.includes(pid)) state.fieldUnassigned.push(pid);});
+  delete state.fieldRoutes[name];
+  state.activeFieldRoute=fieldRouteNames()[0] || "";
+  persist();
+  renderFieldRoutes();
+});
+document.getElementById("showFieldUnassigned").addEventListener("click",()=>{
+  const count=(state.fieldUnassigned||[]).length;
+  document.getElementById("fieldRouteStatus").textContent=count ? `${count} YES parcel${count===1?"":"s"} are not assigned to a field route.` : "All YES parcels are assigned to a field route.";
+});
+document.getElementById("fieldRouteList").addEventListener("click",e=>{
+  const button=e.target.closest("[data-field-remove]");
+  if(!button) return;
+  const pid=button.dataset.fieldRemove;
+  const route=state.fieldRoutes[state.activeFieldRoute];
+  if(!route) return;
+  route.parcels=(route.parcels||[]).filter(value=>value!==pid);
+  if(!state.fieldUnassigned.includes(pid)) state.fieldUnassigned.push(pid);
+  route.updated=new Date().toISOString();
+  persist();
+  renderFieldRoutes();
+});
+document.getElementById("fieldRouteList").addEventListener("dragstart",e=>{
+  const stop=e.target.closest("[data-field-pid]");
+  if(!stop) return;
+  stop.classList.add("is-dragging");
+  e.dataTransfer.setData("text/plain",stop.dataset.fieldPid);
+  e.dataTransfer.effectAllowed="move";
+});
+document.getElementById("fieldRouteList").addEventListener("dragend",e=>e.target.closest("[data-field-pid]")?.classList.remove("is-dragging"));
+document.getElementById("fieldRouteList").addEventListener("dragover",e=>{
+  const stop=e.target.closest("[data-field-pid]");
+  const drop=e.target.closest("[data-field-route-drop]");
+  e.preventDefault();
+  document.querySelectorAll(".field-stop.is-drop-target,.field-route-drop.is-drop-target").forEach(node=>node.classList.remove("is-drop-target"));
+  (stop || drop)?.classList.add("is-drop-target");
+});
+document.getElementById("fieldRouteList").addEventListener("drop",e=>{
+  const stop=e.target.closest("[data-field-pid]");
+  const drop=e.target.closest("[data-field-route-drop]");
+  e.preventDefault();
+  const pid=e.dataTransfer.getData("text/plain");
+  const targetRoute=stop?.dataset.fieldRoute || drop?.dataset.fieldRouteDrop;
+  if(!pid || !targetRoute || !state.fieldRoutes[targetRoute]) return;
+  if(!stop){
+    moveFieldParcel(pid,targetRoute,null);
+    persist();
+    renderFieldRoutes();
+    return;
+  }
+  const route=state.fieldRoutes[targetRoute];
+  const oldIndex=(route.parcels||[]).indexOf(pid);
+  let insertIndex=Number(stop.dataset.fieldIndex);
+  const rect=stop.getBoundingClientRect();
+  if(e.clientY>rect.top+rect.height/2) insertIndex+=1;
+  if(oldIndex>=0 && oldIndex<insertIndex) insertIndex-=1;
+  moveFieldParcel(pid,targetRoute,insertIndex);
+  document.querySelectorAll(".field-stop.is-drop-target,.field-route-drop.is-drop-target").forEach(node=>node.classList.remove("is-drop-target"));
+  persist();
+  renderFieldRoutes();
+});
+
+document.querySelectorAll("[data-pre-view-mode]").forEach(button=>button.addEventListener("click",()=>setPreinspectionViewMode(button.dataset.preViewMode)));
+["preRouteFilter","preShowFilter"].forEach(id=>document.getElementById(id).addEventListener("change",renderPreinspection));
+document.getElementById("preSearchToggle").addEventListener("click",()=>setPreSearchOpen(document.getElementById("preSearchPopover").hidden));
+document.getElementById("preSearch").addEventListener("focus",renderPreSearchSuggestions);
+document.getElementById("preSearch").addEventListener("input",()=>{renderPreSearchSuggestions();renderPreinspection();});
+document.getElementById("preSearchSuggestions").addEventListener("click",event=>{
+  const pick=event.target.closest("[data-pre-search-pick]");
+  if(!pick)return;
+  document.getElementById("preSearch").value=pick.dataset.preSearchPick;
+  renderPreSearchSuggestions();
+  renderPreinspection();
+});
+document.addEventListener("click",event=>{
+  if(!event.target.closest(".pre-search-control"))setPreSearchOpen(false);
+});
+
+document.addEventListener("pointerdown",e=>{
+  if(e.target.closest("#imageryClose")){
+    e.preventDefault();
+    e.stopPropagation();
+    closeImageryCompare();
+  }
+},true);
+document.addEventListener("click",e=>{
+  if(e.target.closest("#imageryClose")){
+    e.preventDefault();
+    e.stopPropagation();
+    closeImageryCompare();
+  }
+},true);
+
+document.getElementById("preBody").addEventListener("mouseover",e=>{
+  const target=e.target.closest("[data-parcel-hover]");
+  if(target) showPropertySnapshot(target.dataset.parcelHover,target);
+});
+document.getElementById("preBody").addEventListener("mouseout",e=>{
+  const target=e.target.closest("[data-parcel-hover]");
+  if(target && (!e.relatedTarget || !target.contains(e.relatedTarget))) hidePropertySnapshot();
+});
+
+document.getElementById("preBody").addEventListener("focusin",e=>{
+  const row=e.target.closest("tr[data-pid]");
+  if(!row) return;
+  state.activeParcel=row.dataset.pid;
+  persist();
+  paintActiveParcelInDom(state.activeParcel);
+});
+
+document.getElementById("preBody").addEventListener("click",e=>{
+  const row=e.target.closest("tr[data-pid]");
+  if(row && !e.target.closest("textarea")){
+    state.activeParcel=row.dataset.pid;
+    persist();
+    paintActiveParcelInDom(state.activeParcel);
+  }
+
+  const outbound=e.target.closest("a");
+  if(outbound && row){
+    window.addEventListener("focus",()=>{
+      renderPreinspection();
+      requestAnimationFrame(()=>restoreActiveParcel({pulse:true}));
+    },{once:true});
+    return;
+  }
+
+  const btn=e.target.closest("button"); if(!btn)return;
+
+  if(btn.dataset.googleSearchPid){
+    openGoogleSearchPreview(btn.dataset.googleSearch,btn.dataset.googleSearchPid);
+    return;
+  }
+
+  if(btn.dataset.copyAddress){
+    copyAddress(btn,btn.dataset.copyAddress);
+    if(row) requestAnimationFrame(()=>restoreActiveParcel({pulse:true}));
+    return;
+  }
+
+  if(btn.dataset.unassign){
+    unassignParcel(btn.dataset.unassign);
+    return;
+  }
+
+  if(btn.dataset.compare){
+    openImageryCompare(btn.dataset.compare);
+    return;
+  }
+
+  if(btn.dataset.photo){
+    openStreetSmartCompare(btn.dataset.photo);
+    return;
+  }
+
+  const pid=btn.dataset.pid; if(!pid)return;
+  const s=inspection(pid);
+  let shouldAdvance=false;
+  if(btn.dataset.check){
+    const k=btn.dataset.check;s[k]=!s[k];
+  }else if(btn.dataset.change){
+    const next=s.changes===btn.dataset.change?"":btn.dataset.change;
+    s.changes=next;
+    if(next==="yes") addYesParcelToFieldRoute(pid);
+    shouldAdvance=next==="yes" || next==="no";
+  }
+  persist();
+  refreshParcelStyles();
+  if(shouldAdvance) advanceActiveParcelFrom(pid);
+  else setActiveParcel(pid,{render:true,scroll:true,pulse:true});
+});
+
+document.getElementById("preBody").addEventListener("input",e=>{
+  if(e.target.tagName!=="TEXTAREA")return;
+  const s=inspection(e.target.dataset.pid);s.notes=e.target.value;persist();
+});
+
+document.getElementById("resetWorkspace").addEventListener("click",()=>{
+  if(!confirm("Clear this database workspace, routes, and preinspection progress? Export a backup first if needed."))return;
+  state=normalizeWorkspaceState({version:2,year:state.year||2026,assignment:[],parcelGeoJSON:null,routes:{},inspections:{},fieldRoutes:{},fieldUnassigned:[],activeParcel:"",activeFieldRoute:""});
+  persist();
+  refreshWorkspaceUI();
+  try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+});
+
+/* Init */
+initMap();
+renderRoutes();
+renderPreinspection();
+renderFieldRoutes();
+refreshStats();
+updateMapMessage();
+refreshSetupVisibility();
+initializeWorkspaces();
+})();
+</script>
+</body>
+</html>

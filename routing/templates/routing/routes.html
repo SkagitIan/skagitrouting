@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Field Route Planner · Field Operations{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'field_map/vendor/leaflet/leaflet.css' %}">
+<link rel="stylesheet" href="{% static 'routing/routing.css' %}">
+{% endblock %}
+{% block content %}
+<main class="routing-app" id="routing-app" data-import-url="{% url 'routing:import' %}" data-plan-url="{% url 'routing:create_plan' %}" data-plans-url="{% url 'routing:plans' %}">
+  <header class="routing-header"><div><span class="routing-eyebrow">Field Operations</span><h1>Route planner</h1><p>Upload your stops, create routes, then optimize when you are ready.</p></div><a href="/routing/">Workspace</a></header>
+  <section class="routing-shell">
+    <div class="routing-toolbar"><div><span class="routing-section-label">Step 1 · Upload</span><form id="routing-import-form">{% csrf_token %}<label>GIS export <input type="file" name="file" accept=".csv,.xlsx" required></label><button class="routing-primary">Import file</button></form></div><label>Saved plans <select id="routing-saved-plans"><option value="">Select a saved plan…</option>{% for plan in plans %}<option value="{{ plan.id }}">{{ plan.name|default:plan.import_file.filename }} · {{ plan.status }}</option>{% endfor %}</select></label></div>
+    <div class="routing-status" id="routing-import-status">Upload a CSV or XLSX export to begin.</div>
+    <section class="routing-cluster-tools" aria-labelledby="cluster-tools-title"><div class="routing-panel-heading"><div><span class="routing-section-label">Step 1 · Create</span><h2 id="cluster-tools-title">Create routes</h2><p id="routing-cluster-help">We’ll group nearby stops into balanced routes.</p></div><div id="routing-summary"></div></div><div class="routing-cluster-settings" id="routing-cluster-settings" hidden><div class="routing-cluster-actions"><label>Stops per route <input id="routing-target" type="number" min="50" max="75" value="60"></label><label>Route type <select id="routing-mode"><option value="driving">Driving</option><option value="walking">Walking</option></select></label><button id="routing-create" class="routing-primary" type="button" disabled>Create routes</button></div><div class="routing-adjust-tools" id="routing-adjust-tools" hidden><div class="routing-selected-stop" id="routing-selected-stop">No map stop selected</div><label>Move selected to <select id="routing-selected-route"><option value="">Choose route…</option></select></label><button id="routing-move-selected" type="button" disabled>Move stop</button><button id="routing-remove-selected" class="routing-danger" type="button" disabled>Delete stop</button><div id="routing-add-stop" class="routing-add-stop" hidden><span class="routing-section-label">Add an unassigned stop</span><label>Stop <select id="routing-available-stop"><option value="">Select an unassigned stop…</option></select></label><label>To route <select id="routing-add-route"><option value="">Select route…</option></select></label><button id="routing-add-stop-button" type="button">Add stop</button></div></div></div><details class="routing-advanced" id="routing-advanced"><summary>Adjust clusters</summary><p>Click a map stop to select it, or drag it onto another route card.</p></details></section>
+  </section>
+  <div id="routing-map" aria-label="Field route map" hidden></div>
+  <section class="routing-routes-section" id="routing-routes-section" hidden><div class="routing-panel-heading"><div><span class="routing-section-label">Step 2 · Finish</span><h2>Optimize routes</h2><p>Use the road and walking network to set the final stop order.</p></div><button id="routing-optimize" class="routing-primary" type="button" disabled>Optimize all routes</button></div><section id="routing-results"></section></section>
+</main>
+<script src="{% static 'field_map/vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'routing/routing.js' %}" defer></script>
+{% endblock %}

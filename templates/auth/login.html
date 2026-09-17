@@ -1,0 +1,3 @@
+{% extends "base.html" %}{% block title %}Sign in · Field Operations{% endblock %}{% block content %}
+<main class="auth-card"><h1>Field Operations</h1><p>Sign in to your company workspace.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Sign in</button>{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}</form></main>
+{% endblock %}
