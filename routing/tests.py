@@ -44,7 +44,7 @@ class StreetSmartServiceTests(SimpleTestCase):
 
         response = sales_cycle(request)
         self.assertEqual(response.status_code, 503)
-        self.assertIn(b"temporarily unavailable", response.content)
+        self.assertIn(b"database connection unavailable", response.content)
 
     @patch("routing.views._street_smart_coordinates", return_value=(1288931.1, 518163.8, "2926"))
     @patch("routing.views.get_streetsmart_config")
