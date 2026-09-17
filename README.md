@@ -24,6 +24,16 @@ Valhalla are configured independently.
 - Staff users can use the route planner and read-only team oversight screens.
 - Superusers manage users and product configuration through `/admin/`.
 
+Create the auditor role after migrations, then mark the boss/auditor user as
+staff and add them to the group:
+
+```powershell
+python manage.py setup_roles
+```
+
+The route planner is available at `/routing/routes/`; the preinspection
+workspace is available at `/routing/`.
+
 ## Railway
 
 Create a separate Railway project with a separate PostgreSQL/PostGIS service.
