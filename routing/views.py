@@ -43,6 +43,14 @@ def _staff_write(request):
     return _staff(request) and not request.user.groups.filter(name="Routing Auditors").exists()
 
 
+def _routing_import_queryset(request):
+    return RoutingImport.objects.filter(created_by=request.user)
+
+
+def _routing_plan_queryset(request):
+    return RoutingPlan.objects.filter(created_by=request.user)
+
+
 def _workspace_user(request):
     return bool(request.user.is_authenticated and request.user.is_active)
 
@@ -55,7 +63,7 @@ def _forbidden(request):
 def routes_page(request):
     if not _staff(request):
         return _forbidden(request)
-    return render(request, "routing/routes.html", {"imports": RoutingImport.objects.all()[:20], "plans": RoutingPlan.objects.select_related("import_file")[:30]})
+    return render(request, "routing/routes.html", {"imports": _routing_import_queryset(request)[:20], "plans": _routing_plan_queryset(request).select_related("import_file")[:30]})
 
 
 @require_GET
@@ -683,7 +691,7 @@ def _record_revision(plan, action):
 def plans_list(request):
     if not _staff(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    return JsonResponse({"plans": [{"id": plan.id, "name": plan.name, "filename": plan.import_file.filename, "mode": plan.mode, "status": plan.status, "route_count": plan.route_count, "created_at": plan.created_at.isoformat()} for plan in RoutingPlan.objects.select_related("import_file")[:30]]})
+    return JsonResponse({"plans": [{"id": plan.id, "name": plan.name, "filename": plan.import_file.filename, "mode": plan.mode, "status": plan.status, "route_count": plan.route_count, "created_at": plan.created_at.isoformat()} for plan in _routing_plan_queryset(request).select_related("import_file")[:30]]})
 
 
 @require_http_methods(["POST"])
@@ -692,7 +700,7 @@ def create_plan(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
     try:
         body = json.loads(request.body or "{}")
-        import_obj = get_object_or_404(RoutingImport, pk=int(body["import_id"]))
+        import_obj = get_object_or_404(_routing_import_queryset(request), pk=int(body["import_id"]))
         mode = body.get("mode", "driving")
         target = max(50, min(75, int(body.get("target_stop_count", 60))))
         name = str(body.get("name") or "").strip()[:160]
@@ -722,7 +730,7 @@ def create_plan(request):
 def optimize_plan(request, plan_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     for route in plan.routes.prefetch_related("stops"):
         _optimize_route(route, plan)
     plan.status = "optimized"
@@ -775,7 +783,7 @@ def _renumber_route(route):
 def optimize_route(request, plan_id, route_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     route = get_object_or_404(RoutingRoute, pk=route_id, plan=plan)
     _optimize_route(route, plan)
     plan.status = "optimized"
@@ -789,7 +797,7 @@ def optimize_route(request, plan_id, route_id):
 def set_route_mode(request, plan_id, route_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     route = get_object_or_404(RoutingRoute, pk=route_id, plan=plan)
     try:
         mode = json.loads(request.body or "{}").get("mode")
@@ -811,7 +819,7 @@ def set_route_mode(request, plan_id, route_id):
 def reverse_route(request, plan_id, route_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     route = get_object_or_404(RoutingRoute, pk=route_id, plan=plan)
     _set_route_order(route, [stop.id for stop in reversed(list(route.stops.all()))])
     plan.status = "clustered"
@@ -824,7 +832,7 @@ def reverse_route(request, plan_id, route_id):
 def reset_route(request, plan_id, route_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     route = get_object_or_404(RoutingRoute, pk=route_id, plan=plan)
     first_revision = plan.revisions.order_by("revision_number").first()
     original = next((item for item in (first_revision.snapshot.get("routes", []) if first_revision else []) if item.get("id") == route.id), None)
@@ -841,7 +849,7 @@ def reset_route(request, plan_id, route_id):
 def move_stop(request, plan_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     try:
         body = json.loads(request.body or "{}")
         stop = get_object_or_404(RoutingStop, pk=int(body["stop_id"]), route__plan=plan)
@@ -875,7 +883,7 @@ def move_stop(request, plan_id):
 def remove_stop(request, plan_id, stop_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     stop = get_object_or_404(RoutingStop, pk=stop_id, route__plan=plan)
     route = stop.route
     stop.delete()
@@ -892,7 +900,7 @@ def remove_stop(request, plan_id, stop_id):
 def add_stop(request, plan_id):
     if not _staff_write(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     try:
         body = json.loads(request.body or "{}")
         row = get_object_or_404(RoutingImportRow, pk=int(body["import_row_id"]), import_file=plan.import_file, validation_status="valid")
@@ -918,7 +926,7 @@ def add_stop(request, plan_id):
 def available_stops(request, plan_id):
     if not _staff(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    plan = get_object_or_404(RoutingPlan, pk=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
     assigned = RoutingStop.objects.filter(route__plan=plan).values("import_row_id")
     rows = plan.import_file.rows.filter(validation_status="valid").exclude(id__in=assigned).order_by("parcel_id")[:1000]
     return JsonResponse({"stops": [{"id": row.id, "parcel_id": row.parcel_id, "address": row.address} for row in rows]})
@@ -928,14 +936,14 @@ def available_stops(request, plan_id):
 def plan_detail(request, plan_id):
     if not _staff(request):
         return JsonResponse({"error": "Staff sign-in is required."}, status=403)
-    return JsonResponse(_plan_payload(get_object_or_404(RoutingPlan, pk=plan_id)))
+    return JsonResponse(_plan_payload(get_object_or_404(_routing_plan_queryset(request), pk=plan_id)))
 
 
 @require_GET
 def export_plan(request, plan_id):
     if not _staff(request):
         return HttpResponse("Staff sign-in is required.", status=403)
-    response = HttpResponse(route_csv(get_object_or_404(RoutingPlan, pk=plan_id)), content_type="text/csv")
+    response = HttpResponse(route_csv(get_object_or_404(_routing_plan_queryset(request), pk=plan_id)), content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="route-plan-{plan_id}.csv"'
     return response
 
@@ -944,7 +952,8 @@ def export_plan(request, plan_id):
 def export_route(request, plan_id, route_id):
     if not _staff(request):
         return HttpResponse("Staff sign-in is required.", status=403)
-    route = get_object_or_404(RoutingRoute, pk=route_id, plan_id=plan_id)
+    plan = get_object_or_404(_routing_plan_queryset(request), pk=plan_id)
+    route = get_object_or_404(RoutingRoute, pk=route_id, plan=plan)
     response = HttpResponse(single_route_csv(route), content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="route-plan-{plan_id}-route-{route.route_number}.csv"'
     return response

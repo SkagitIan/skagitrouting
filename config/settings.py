@@ -94,3 +94,6 @@ CYCLOMEDIA_PASSWORD = os.getenv("CYCLOMEDIA_PASSWORD", "")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+# Keep this product's session separate from other Django apps hosted on the
+# same parent domain. Existing sessions will intentionally require re-login.
+SESSION_COOKIE_NAME = "proprietaryrouting_sessionid"

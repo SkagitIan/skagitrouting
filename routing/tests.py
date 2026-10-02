@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 from django.contrib.auth import get_user_model
 from django.test import Client, RequestFactory, SimpleTestCase, TestCase
 
-from .models import PreinspectionWorkspace
+from .models import PreinspectionWorkspace, RoutingImport, RoutingPlan
 from .services.importers import infer_street_side, normalize_row, read_upload
 from .services.optimization import cluster_and_order
 from .services.openskagit_api import OpenSkagitUnavailable
@@ -369,6 +369,31 @@ class WorkspaceApiTests(TestCase):
         loaded = client.get(f"/routing/api/workspaces/{workspace_id}/")
         self.assertEqual(loaded.status_code, 200)
         self.assertEqual(loaded.json()["state"]["fieldRoutes"]["Field Route 1"]["parcels"], ["P123"])
+
+    def test_logout_uses_post_and_redirects_to_login(self):
+        client = Client()
+        self.assertTrue(client.login(username="alice", password="test-password"))
+        self.assertEqual(client.get("/logout/").status_code, 405)
+        response = client.post("/logout/")
+        self.assertRedirects(response, "/login/")
+        self.assertEqual(client.get("/routing/").status_code, 302)
+
+    def test_staff_route_data_is_private_to_the_creator(self):
+        self.alice.is_staff = True
+        self.alice.save(update_fields=["is_staff"])
+        self.bob.is_staff = True
+        self.bob.save(update_fields=["is_staff"])
+        import_file = RoutingImport.objects.create(created_by=self.alice, filename="alice.csv", file_type="csv")
+        plan = RoutingPlan.objects.create(created_by=self.alice, import_file=import_file, mode="driving")
+
+        alice_client = Client()
+        self.assertTrue(alice_client.login(username="alice", password="test-password"))
+        self.assertEqual(len(alice_client.get("/routing/routes/plans/").json()["plans"]), 1)
+
+        bob_client = Client()
+        self.assertTrue(bob_client.login(username="bob", password="test-password"))
+        self.assertEqual(bob_client.get("/routing/routes/plans/").json()["plans"], [])
+        self.assertEqual(bob_client.get(f"/routing/routes/plan/{plan.id}/").status_code, 404)
 
     def test_workspace_records_are_isolated_between_users(self):
         owner_client = Client()
