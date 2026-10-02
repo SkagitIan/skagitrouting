@@ -1793,7 +1793,9 @@ async function openStreetSmartCompare(pid){
 
   const setStatus=(message,error=false)=>{status.textContent=message;status.style.color=error?"var(--red-text)":"var(--muted)";};
   let currentOrientation={yaw:0,pitch:0,hFov:90};
-  const getCurrentRecording=()=>viewer?.getRecording?.() || {};
+  const getCurrentRecording=()=>{
+    try{return viewer?.getRecording?.() || {};}catch(error){return {};}
+  };
   const orientationNumber=(value,fallback)=>{
     const number=Number(value);
     return Number.isFinite(number)?number:fallback;
@@ -1880,7 +1882,14 @@ async function openStreetSmartCompare(pid){
       // server then asks Cyclomedia's rendering API for a high-resolution JPG
       // with this yaw/pitch/hFov; no browser screenshot is involved.
       const orientation=rememberOrientation(getCurrentOrientation());
-      const response=await fetch(`/routing/parcel/${encodeURIComponent(pid)}/streetsmart/save/`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":csrf()},body:JSON.stringify({recording_id:recordingId,yaw:orientation.yaw,pitch:orientation.pitch,hfov:orientation.hFov,srs})});
+      // Road navigation changes the active panorama recording, not just the
+      // camera orientation. Resolve it again at export time so the render API
+      // receives the road position currently visible in the viewer.
+      const activeRecording=await Promise.resolve(getCurrentRecording());
+      const activeRecordingId=readRecordingId(activeRecording)||recordingId;
+      if(!activeRecordingId)throw new Error("The current StreetSmart recording is not ready to save.");
+      recordingId=activeRecordingId;
+      const response=await fetch(`/routing/parcel/${encodeURIComponent(pid)}/streetsmart/save/`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":csrf()},body:JSON.stringify({recording_id:activeRecordingId,yaw:orientation.yaw,pitch:orientation.pitch,hfov:orientation.hFov,srs})});
       if(!response.ok){
         const payload=await response.json().catch(()=>({}));
         throw new Error(payload.error || "The StreetSmart image could not be generated.");
@@ -1976,7 +1985,7 @@ async function openStreetSmartCompare(pid){
     viewer.lookAtCoordinate?.([Number(payload.x),Number(payload.y)],spatialReference);
     const events=api.Events?.panoramaViewer||{};
     if(events.VIEW_CHANGE)viewer.on?.(events.VIEW_CHANGE,updateViewerOrientation);
-    if(events.IMAGE_CHANGE)viewer.on?.(events.IMAGE_CHANGE,updateRecordingMeta);
+    if(events.IMAGE_CHANGE)viewer.on?.(events.IMAGE_CHANGE,()=>updateRecordingMeta());
     if(events.RECORDING_LOADED)viewer.on?.(events.RECORDING_LOADED,event=>{
       const loadedRecording=event?.detail?.recording;
       updateRecordingMeta(loadedRecording);
