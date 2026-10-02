@@ -418,14 +418,14 @@ class WorkspaceApiTests(TestCase):
         self.assertEqual(stale.status_code, 409)
         self.assertEqual(PreinspectionWorkspace.objects.get(pk=created["id"]).state["activeParcel"], "P999")
 
-    def test_superuser_can_list_other_users_workspaces(self):
+    def test_superuser_workspace_api_stays_private(self):
         owner_client = Client()
         self.assertTrue(owner_client.login(username="alice", password="test-password"))
         owner_client.post("/routing/api/workspaces/", data={"name": "Visible to admin", "state": self.state}, content_type="application/json")
         admin_client = Client()
         self.assertTrue(admin_client.login(username="admin", password="test-password"))
         payload = admin_client.get("/routing/api/workspaces/").json()
-        self.assertEqual(len(payload["workspaces"]), 1)
+        self.assertEqual(payload["workspaces"], [])
 
     def test_staff_can_review_users_but_regular_users_cannot(self):
         staff = get_user_model().objects.create_user(username="staff", password="test-password", is_staff=True)

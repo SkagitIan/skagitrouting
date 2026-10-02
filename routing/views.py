@@ -154,8 +154,6 @@ MAX_WORKSPACE_STATE_BYTES = 15 * 1024 * 1024
 
 
 def _workspace_queryset(request):
-    if request.user.is_superuser:
-        return PreinspectionWorkspace.objects.all()
     return PreinspectionWorkspace.objects.filter(owner=request.user)
 
 
