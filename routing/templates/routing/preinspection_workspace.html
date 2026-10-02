@@ -1792,8 +1792,35 @@ async function openStreetSmartCompare(pid){
   let closed=false;
 
   const setStatus=(message,error=false)=>{status.textContent=message;status.style.color=error?"var(--red-text)":"var(--muted)";};
+  let currentOrientation={yaw:0,pitch:0,hFov:90};
   const getCurrentRecording=()=>viewer?.getRecording?.() || {};
-  const getCurrentOrientation=()=>viewer?.getOrientation?.() || {yaw,pitch,hFov:hfov};
+  const orientationNumber=(value,fallback)=>{
+    const number=Number(value);
+    return Number.isFinite(number)?number:fallback;
+  };
+  const getCurrentOrientation=()=>{
+    let orientation=null;
+    try{orientation=viewer?.getOrientation?.();}catch(error){}
+    orientation=orientation&&typeof orientation==="object"?orientation:{};
+    return {
+      yaw:orientationNumber(orientation.yaw,currentOrientation.yaw),
+      pitch:orientationNumber(orientation.pitch,currentOrientation.pitch),
+      hFov:orientationNumber(orientation.hFov ?? orientation.hfov,currentOrientation.hFov),
+    };
+  };
+  const rememberOrientation=orientation=>{
+    const next=orientation&&typeof orientation==="object"?orientation:{};
+    currentOrientation={
+      yaw:orientationNumber(next.yaw,currentOrientation.yaw),
+      pitch:orientationNumber(next.pitch,currentOrientation.pitch),
+      hFov:orientationNumber(next.hFov ?? next.hfov,currentOrientation.hFov),
+    };
+    yaw=currentOrientation.yaw;
+    pitch=currentOrientation.pitch;
+    hfov=currentOrientation.hFov;
+    updateViewMeta();
+    return currentOrientation;
+  };
   const readRecordingId=recording=>String(recording?.imageId||recording?.imageID||recording?.imageid||recording?.image_id||recording?.ImageId||recording?.ImageID||recording?.recordingId||recording?.RecordingId||recording?.recording_id||recording?.id||recording?.getImageId?.()||"");
   const updateRecordingMeta=recordingOverride=>{
     if(!viewer)return;
@@ -1805,13 +1832,11 @@ async function openStreetSmartCompare(pid){
     recordingMeta.textContent=recordingId?`Recording ${recordingId}${recordingDate?` · ${recordingDate}`:""}`:"StreetSmart panorama loaded";
     saveButton.disabled=!viewerReady || !recordingId;
   };
-  const updateViewerOrientation=()=>{
+  const updateViewerOrientation=event=>{
     if(!viewer)return;
-    const orientation=getCurrentOrientation();
-    yaw=Number(orientation.yaw)||0;
-    pitch=Number(orientation.pitch)||0;
-    hfov=Number(orientation.hFov ?? orientation.hfov)||90;
-    updateViewMeta();
+    // VIEW_CHANGE carries the post-interaction camera state. Prefer it so a
+    // save immediately after a drag/scroll cannot race a stale viewer getter.
+    rememberOrientation(event?.detail||getCurrentOrientation());
   };
   const updateViewMeta=()=>{
     viewLabel.textContent=`${Math.round(hfov)}°`;
@@ -1851,8 +1876,11 @@ async function openStreetSmartCompare(pid){
     saveButton.disabled=true;
     setStatus("Saving high-resolution JPG…");
     try{
-      const orientation=getCurrentOrientation();
-      const response=await fetch(`/routing/parcel/${encodeURIComponent(pid)}/streetsmart/save/`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":csrf()},body:JSON.stringify({recording_id:recordingId,yaw:Number(orientation.yaw)||yaw,pitch:Number(orientation.pitch)||pitch,hfov:Number(orientation.hFov ?? orientation.hfov)||hfov,srs})});
+      // Read the SDK's current camera state at the moment of export. The
+      // server then asks Cyclomedia's rendering API for a high-resolution JPG
+      // with this yaw/pitch/hFov; no browser screenshot is involved.
+      const orientation=rememberOrientation(getCurrentOrientation());
+      const response=await fetch(`/routing/parcel/${encodeURIComponent(pid)}/streetsmart/save/`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":csrf()},body:JSON.stringify({recording_id:recordingId,yaw:orientation.yaw,pitch:orientation.pitch,hfov:orientation.hFov,srs})});
       if(!response.ok){
         const payload=await response.json().catch(()=>({}));
         throw new Error(payload.error || "The StreetSmart image could not be generated.");
