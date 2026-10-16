@@ -34,6 +34,19 @@ python manage.py setup_roles
 The route planner is available at `/routing/routes/`; the preinspection
 workspace is available at `/routing/`.
 
+## Workspace backups
+
+Workspace saves are persisted per user in PostgreSQL. Each save also creates a
+server-side `WorkspaceRevision` snapshot, so the database retains a recovery
+history instead of relying only on the browser cache. From the Preinspection
+workspace tools, use **Download my backups** to download every workspace owned
+by the signed-in user, including its revision history. **Export Backup** still
+downloads only the workspace currently open in the browser.
+
+For disaster recovery, configure Railway/PostgreSQL backups as well. An export
+protects users from workspace mistakes; a database backup protects against a
+lost database or deployment.
+
 ## Railway
 
 Create a separate Railway project with a separate PostgreSQL/PostGIS service.

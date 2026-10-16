@@ -247,6 +247,42 @@ def workspace_collection(request):
     return JsonResponse(_workspace_payload(workspace, include_state=True), status=201)
 
 
+@require_GET
+def workspace_backup(request):
+    """Download a user-scoped backup, including revision history for recovery."""
+    if not _workspace_user(request):
+        return JsonResponse({"error": "Sign-in is required."}, status=401)
+    workspaces = []
+    for workspace in _workspace_queryset(request).prefetch_related("revisions__actor"):
+        workspaces.append({
+            "id": workspace.id,
+            "name": workspace.name,
+            "year": workspace.year,
+            "revision": workspace.revision,
+            "updated_at": workspace.updated_at.isoformat(),
+            "state": workspace.state or dict(DEFAULT_WORKSPACE_STATE),
+            "revisions": [
+                {
+                    "revision": revision.revision_number,
+                    "action": revision.action,
+                    "created_at": revision.created_at.isoformat(),
+                    "actor": revision.actor.get_username(),
+                    "state": revision.snapshot,
+                }
+                for revision in workspace.revisions.all()
+            ],
+        })
+    payload = {
+        "backup_version": 1,
+        "exported_at": timezone.now().isoformat(),
+        "user": request.user.get_username(),
+        "workspaces": workspaces,
+    }
+    response = HttpResponse(json.dumps(payload, indent=2), content_type="application/json")
+    response["Content-Disposition"] = f'attachment; filename="field-operations-backup-{request.user.pk}.json"'
+    return response
+
+
 @require_http_methods(["GET", "PATCH"])
 def workspace_detail(request, workspace_id):
     if not _workspace_user(request):

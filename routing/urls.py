@@ -12,6 +12,7 @@ urlpatterns = [
     path("admin/users/new/", views.admin_user_create, name="admin_user_create"),
     path("admin/users/<int:user_id>/", views.admin_user_detail, name="admin_user_detail"),
     path("api/workspaces/", views.workspace_collection, name="workspace_collection"),
+    path("api/workspaces/backup/", views.workspace_backup, name="workspace_backup"),
     path("api/workspaces/<int:workspace_id>/", views.workspace_detail, name="workspace_detail"),
     path("api/workspaces/<int:workspace_id>/state/", views.workspace_state, name="workspace_state"),
     path("api/settings/", views.routing_user_settings, name="routing_user_settings"),

@@ -463,6 +463,7 @@ textarea{
         <summary>Workspace tools</summary>
         <div class="workspace-actions">
           <button class="btn" id="exportBackup">Export Backup</button>
+          <button class="btn" id="downloadAllBackups" type="button">Download my backups</button>
           <label class="file-label">
             Restore Backup
             <input id="backupFile" type="file" accept=".json,application/json">
@@ -527,12 +528,14 @@ textarea{
   <div class="field-routes-layout">
     <aside class="field-route-panel">
       <h2>Field Visit Routes</h2>
-      <div class="help">YES parcels stay on their appraisal route and are added here for field visits. Drag stops to set the driving order.</div>
+      <div class="help">YES parcels stay tied to their appraisal routes. Keep adding visits to an open route until you create the next route; creating a new route locks the current one. Optimize after collecting visits.</div>
       <div class="field-route-controls">
         <select id="fieldRouteSelect" aria-label="Selected field route"></select>
         <button id="newFieldRoute" type="button">+ Route</button>
       </div>
       <div class="field-route-actions">
+        <button class="primary" id="optimizeFieldRoute" type="button">Optimize route</button>
+        <button id="toggleFieldRouteLock" type="button">Lock route</button>
         <button class="primary" id="copyFieldParcels" type="button">Copy parcel numbers</button>
         <button id="printFieldRoute" type="button">Print field sheet</button>
         <button id="showFieldUnassigned" type="button">Unassigned (<span id="fieldUnassignedCount">0</span>)</button>
@@ -565,15 +568,18 @@ const USER_CACHE_KEY = `skagit-preinspection-cache-user-${document.body.dataset.
 const PREINSPECTION_VIEW_MODE_KEY = `${USER_CACHE_KEY}-view-mode-v1`;
 const WORKSPACE_API = "/routing/api/workspaces/";
 const COLORS = ["#2f6fa3","#7b5aa6","#2f8c72","#b36b2c","#a44545","#5d7f3b","#8f5d75","#4d7f8e","#6f6f3c","#855f37"];
-
-let state = loadState() || {
+let state = normalizeWorkspaceState(loadState() || {
   version:1,
   year:2026,
   assignment:[],
   parcelGeoJSON:null,
   routes:{},
-  inspections:{}
-};
+  inspections:{},
+  fieldRoutes:{},
+  fieldUnassigned:[],
+  activeParcel:"",
+  activeFieldRoute:""
+});
 if(!Object.prototype.hasOwnProperty.call(state,"activeParcel")) state.activeParcel="";
 if(!state.fieldRoutes || typeof state.fieldRoutes!="object" || Array.isArray(state.fieldRoutes)) state.fieldRoutes={};
 if(!Array.isArray(state.fieldUnassigned)) state.fieldUnassigned=[];
@@ -690,12 +696,20 @@ function normalizeWorkspaceState(value){
   if(!next.inspections || typeof next.inspections!=="object" || Array.isArray(next.inspections)) next.inspections={};
   if(!next.fieldRoutes || typeof next.fieldRoutes!=="object" || Array.isArray(next.fieldRoutes)) next.fieldRoutes={};
   if(!Array.isArray(next.fieldUnassigned)) next.fieldUnassigned=[];
+  Object.entries(next.fieldRoutes).forEach(([name,route],routeIndex)=>{
+    if(!route || typeof route!=="object") next.fieldRoutes[name]={};
+    const current=next.fieldRoutes[name];
+    current.name=String(current.name||name);
+    current.color=current.color || COLORS[routeIndex % COLORS.length];
+    current.parcels=Array.isArray(current.parcels) ? [...new Set(current.parcels.map(String))] : [];
+    current.locked=Boolean(current.locked);
+  });
   if(!Object.prototype.hasOwnProperty.call(next,"activeParcel")) next.activeParcel="";
   if(!Object.prototype.hasOwnProperty.call(next,"activeFieldRoute")) next.activeFieldRoute="";
   if(!Object.keys(next.fieldRoutes).length){
     const legacyYes=next.assignment.map(row=>row.PARCELID).filter(pid=>(next.inspections[String(pid)]||{}).changes==="yes");
     if(legacyYes.length){
-      next.fieldRoutes={"Field Route 1":{name:"Field Route 1",color:COLORS[0],parcels:[...new Set(legacyYes)],updated:new Date().toISOString()}};
+      next.fieldRoutes={"Field Route 1":{name:"Field Route 1",color:COLORS[0],parcels:[...new Set(legacyYes)],locked:false,updated:new Date().toISOString()}};
       next.activeFieldRoute="Field Route 1";
     }
   }
@@ -845,29 +859,52 @@ function fieldRouteForParcel(pid){
   return fieldRouteNames().find(name=>(state.fieldRoutes[name].parcels||[]).includes(pid)) || "";
 }
 
+function fieldRouteIsOpen(name){
+  const route=state.fieldRoutes[name];
+  return Boolean(route && !route.locked);
+}
+
+function nextFieldRouteName(){
+  let number=fieldRouteNames().length+1;
+  let name=`Field Route ${number}`;
+  while(state.fieldRoutes[name]) name=`Field Route ${++number}`;
+  return name;
+}
+
 function ensureFieldRoute(name="Field Route 1"){
   name=String(name||"").trim();
   if(!name) name="Field Route 1";
   if(!state.fieldRoutes[name]){
-    state.fieldRoutes[name]={name,color:COLORS[fieldRouteNames().length % COLORS.length],parcels:[],updated:new Date().toISOString()};
+    state.fieldRoutes[name]={name,color:COLORS[fieldRouteNames().length % COLORS.length],parcels:[],locked:false,updated:new Date().toISOString()};
   }
+  const route=state.fieldRoutes[name];
+  route.name=name;
+  route.parcels=Array.isArray(route.parcels) ? route.parcels : [];
+  route.locked=Boolean(route.locked);
   return name;
 }
 
 function addYesParcelToFieldRoute(pid){
   if(!pid || fieldRouteForParcel(pid)) return;
-  const routeName=ensureFieldRoute(fieldRouteNames()[0] || "Field Route 1");
+  let routeName=fieldRouteNames().find(fieldRouteIsOpen);
+  const created=!routeName;
+  if(created) routeName=ensureFieldRoute(nextFieldRouteName());
   const route=state.fieldRoutes[routeName];
   route.parcels=route.parcels||[];
   if(!route.parcels.includes(pid)) route.parcels.push(pid);
   route.updated=new Date().toISOString();
-  state.activeFieldRoute=state.activeFieldRoute || routeName;
+  if(created || !state.activeFieldRoute) state.activeFieldRoute=routeName;
   state.fieldUnassigned=(state.fieldUnassigned||[]).filter(value=>value!==pid);
 }
 
 function moveFieldParcel(pid,targetRoute,insertIndex=null){
-  if(!pid || !state.fieldRoutes[targetRoute]) return;
+  if(!pid || !state.fieldRoutes[targetRoute]) return false;
   const sourceName=fieldRouteForParcel(pid);
+  if(sourceName!==targetRoute && !fieldRouteIsOpen(targetRoute)){
+    const route=state.fieldRoutes[targetRoute];
+    document.getElementById("fieldRouteStatus").textContent=`${targetRoute} is locked. Open it before adding visits.`;
+    return false;
+  }
   if(sourceName){
     state.fieldRoutes[sourceName].parcels=(state.fieldRoutes[sourceName].parcels||[]).filter(value=>value!==pid);
   }else{
@@ -879,6 +916,7 @@ function moveFieldParcel(pid,targetRoute,insertIndex=null){
   target.parcels.splice(index,0,pid);
   target.updated=new Date().toISOString();
   state.activeFieldRoute=targetRoute;
+  return true;
 }
 
 function fieldParcelRows(name){
@@ -922,9 +960,11 @@ function renderFieldRouteMap(){
 function renderFieldRoutes(){
   const select=document.getElementById("fieldRouteSelect");
   const list=document.getElementById("fieldRouteList");
+  const lockButton=document.getElementById("toggleFieldRouteLock");
   const names=fieldRouteNames();
   if(!names.length){
     select.innerHTML='<option value="">No field routes</option>';
+    if(lockButton) lockButton.disabled=true;
     list.className="field-route-list empty";
     list.textContent="Mark a parcel YES on the Preinspection page to create the first field route.";
     document.getElementById("fieldUnassignedCount").textContent=String((state.fieldUnassigned||[]).length);
@@ -934,6 +974,10 @@ function renderFieldRoutes(){
   select.innerHTML=names.map(name=>`<option value="${escapeAttr(name)}">${escapeHTML(name)} (${(state.fieldRoutes[name].parcels||[]).length})</option>`).join("");
   select.value=state.activeFieldRoute;
   const route=state.fieldRoutes[state.activeFieldRoute];
+  if(lockButton){
+    lockButton.disabled=false;
+    lockButton.textContent=route?.locked ? "Open route" : "Lock route";
+  }
   list.className="field-route-list";
   const assignedMarkup=names.map(name=>{
     const routeRows=fieldParcelRows(name);
@@ -941,14 +985,93 @@ function renderFieldRoutes(){
       const pid=a.PARCELID, address=parcelAddress(a);
       return `<div class="field-stop" draggable="true" data-field-route="${escapeAttr(name)}" data-field-pid="${escapeAttr(pid)}" data-field-index="${index}"><span class="field-stop-number">${index+1}</span><div class="field-stop-main"><b>${escapeHTML(pid.replace(/^P/i,""))}</b><span>${escapeHTML(address||"No address")}</span></div><button class="field-stop-remove" type="button" data-field-remove="${escapeAttr(pid)}" title="Remove from field route">×</button></div>`;
     }).join("") : '<div class="help">Drop parcels here.</div>';
-    return `<section class="field-route-column ${name===state.activeFieldRoute?"is-active":""}" data-field-route-column="${escapeAttr(name)}"><div class="field-route-column-head"><b>${escapeHTML(name)}</b><span>${routeRows.length} stop${routeRows.length===1?"":"s"}</span></div><div class="field-route-drop" data-field-route-drop="${escapeAttr(name)}">${stops}</div></section>`;
+    const routeState=state.fieldRoutes[name];
+    const routeLabel=routeState?.locked ? "Locked" : "Open";
+    return `<section class="field-route-column ${name===state.activeFieldRoute?"is-active":""}" data-field-route-column="${escapeAttr(name)}"><div class="field-route-column-head"><b>${escapeHTML(name)}</b><span>${routeLabel}</span></div><div class="field-route-drop" data-field-route-drop="${escapeAttr(name)}">${stops}</div></section>`;
   }).join("");
   const unassignedRows=(state.fieldUnassigned||[]).map(pid=>assignmentMap().get(pid)).filter(Boolean);
   const unassignedMarkup=unassignedRows.length ? `<div class="field-unassigned-heading">Unassigned YES parcels — drag into this route</div>`+unassignedRows.map(a=>`<div class="field-stop unassigned" draggable="true" data-field-pid="${escapeAttr(a.PARCELID)}"><span class="field-stop-number">+</span><div class="field-stop-main"><b>${escapeHTML(a.PARCELID.replace(/^P/i,""))}</b><span>${escapeHTML(parcelAddress(a)||"No address")}</span></div><span></span></div>`).join("") : "";
   list.innerHTML=assignedMarkup+unassignedMarkup;
   document.getElementById("fieldUnassignedCount").textContent=String((state.fieldUnassigned||[]).length);
-  document.getElementById("fieldRouteStatus").textContent=`${(route?.parcels||[]).length} stop${(route?.parcels||[]).length===1?"":"s"} selected · drag within or between routes`;
+  const routeStatus=route?.locked ? "locked" : "open";
+  document.getElementById("fieldRouteStatus").textContent=`${(route?.parcels||[]).length} stop${(route?.parcels||[]).length===1?"":"s"} selected · ${routeStatus} · drag within or between routes`;
   renderFieldRouteMap();
+}
+
+function fieldPoint(pid){
+  const feature=(state.parcelGeoJSON?.features||[]).find(item=>String(item.properties?.PARCELID||"").trim().toUpperCase()===String(pid||"").trim().toUpperCase());
+  const coordinates=[];
+  const collect=value=>{
+    if(Array.isArray(value) && value.length>=2 && typeof value[0]==="number" && typeof value[1]==="number") coordinates.push(value);
+    else if(Array.isArray(value)) value.forEach(collect);
+  };
+  collect(feature?.geometry?.coordinates);
+  if(coordinates.length){
+    return coordinates.reduce((sum,[x,y])=>[sum[0]+x/coordinates.length,sum[1]+y/coordinates.length],[0,0]);
+  }
+  const row=assignmentMap().get(pid)||{};
+  const x=Number(row.XCoordinate),y=Number(row.YCoordinate);
+  return Math.abs(x)<=180 && Math.abs(y)<=90 && Number.isFinite(x) && Number.isFinite(y) ? [x,y] : null;
+}
+
+function fieldPointDistance(a,b){
+  if(!a || !b) return Number.POSITIVE_INFINITY;
+  const lat=Math.PI*((a[1]+b[1])/360);
+  const dx=(b[0]-a[0])*111320*Math.cos(lat), dy=(b[1]-a[1])*110540;
+  return Math.hypot(dx,dy);
+}
+
+function optimizeFieldParcelIds(parcels){
+  const amap=assignmentMap();
+  const rows=parcels.map(pid=>({pid,row:amap.get(pid),point:fieldPoint(pid)})).filter(item=>item.row);
+  const routeGroups=new Map();
+  rows.forEach(item=>{
+    const routeName=routeForParcel(item.pid)||"Unassigned appraisal route";
+    if(!routeGroups.has(routeName)) routeGroups.set(routeName,[]);
+    routeGroups.get(routeName).push(item);
+  });
+  const ordered=[];
+  [...routeGroups.keys()].sort((a,b)=>a==="Unassigned appraisal route"?1:b==="Unassigned appraisal route"?-1:routeSort(a,b)).forEach(routeName=>{
+    const streets=new Map();
+    routeGroups.get(routeName).forEach(item=>{
+      const street=String(item.row.SitusStName||"Unknown street").trim().toUpperCase()||"UNKNOWN STREET";
+      if(!streets.has(street)) streets.set(street,[]);
+      streets.get(street).push(item);
+    });
+    let cursor=null;
+    while(streets.size){
+      const candidates=[...streets.entries()].map(([street,items])=>{
+        const points=items.map(item=>item.point).filter(Boolean);
+        const center=points.length ? points.reduce((sum,point)=>[sum[0]+point[0]/points.length,sum[1]+point[1]/points.length],[0,0]) : null;
+        return {street,items,center,distance:cursor&&center ? fieldPointDistance(cursor,center) : 0};
+      }).sort((a,b)=>a.distance-b.distance || a.street.localeCompare(b.street));
+      const chosen=candidates[0];
+      const items=chosen.items.sort((a,b)=>{
+        const an=Number((String(a.row.SitusStNo||"").match(/^\s*(\d+)/)||["999999"])[0]);
+        const bn=Number((String(b.row.SitusStNo||"").match(/^\s*(\d+)/)||["999999"])[0]);
+        const ad=fieldPointDistance(cursor,a.point),bd=fieldPointDistance(cursor,b.point);
+        return an-bn || (Number.isFinite(ad)?ad:1e15)-(Number.isFinite(bd)?bd:1e15) || String(a.pid).localeCompare(String(b.pid));
+      });
+      if(cursor && items.length>1 && fieldPointDistance(cursor,items[items.length-1].point)<fieldPointDistance(cursor,items[0].point)) items.reverse();
+      ordered.push(...items.map(item=>item.pid));
+      cursor=items[items.length-1]?.point || chosen.center || cursor;
+      streets.delete(chosen.street);
+    }
+  });
+  return ordered.concat(parcels.filter(pid=>!ordered.includes(pid)));
+}
+
+function optimizeActiveFieldRoute(){
+  const name=state.activeFieldRoute, route=state.fieldRoutes[name];
+  if(!route) return;
+  if((route.parcels||[]).length<2){document.getElementById("fieldRouteStatus").textContent="Add at least two visits before optimizing.";return;}
+  route.parcels=optimizeFieldParcelIds(route.parcels||[]);
+  route.optimizedAt=new Date().toISOString();
+  route.orderStrategy="appraisal route → street → street number → distance";
+  route.updated=new Date().toISOString();
+  persist();
+  renderFieldRoutes();
+  document.getElementById("fieldRouteStatus").textContent=`Optimized ${route.parcels.length} visits by appraisal route, street, number, and distance.`;
 }
 
 function copyFieldParcelNumbers(){
@@ -2448,6 +2571,18 @@ function exportBackup(){
   download(JSON.stringify(state,null,2),`Skagit_Preinspection_${state.year}_backup.json`,"application/json");
 }
 
+async function downloadAllBackups(){
+  try{
+    const response=await fetch(`${WORKSPACE_API}backup/`,{credentials:"same-origin"});
+    if(!response.ok) throw new Error("The server could not create the backup.");
+    const blob=await response.blob();
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=`Field_Operations_${new Date().toISOString().slice(0,10)}_backup.json`;a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    workspaceStatus("All workspaces backed up","saved");
+  }catch(error){workspaceStatus(error.message||"Backup failed","error");}
+}
+
 function restoreBackup(file){
   const r=new FileReader();
   r.onload=()=>{
@@ -2580,6 +2715,7 @@ document.getElementById("routeList").addEventListener("click",e=>{
   if(d)deleteRoute(d);
 });
 document.getElementById("exportBackup").addEventListener("click",exportBackup);
+document.getElementById("downloadAllBackups").addEventListener("click",downloadAllBackups);
 document.getElementById("backupFile").addEventListener("change",e=>{if(e.target.files[0])restoreBackup(e.target.files[0])});
 document.getElementById("exportProgress").addEventListener("click",exportProgress);
 document.getElementById("workspaceSelect").addEventListener("change",async e=>{
@@ -2623,12 +2759,26 @@ document.getElementById("fieldRouteSelect").addEventListener("change",e=>{
   persist();
   renderFieldRoutes();
 });
+document.getElementById("toggleFieldRouteLock").addEventListener("click",()=>{
+  const route=state.fieldRoutes[state.activeFieldRoute];
+  if(!route) return;
+  route.locked=!route.locked;
+  route.updated=new Date().toISOString();
+  persist();
+  renderFieldRoutes();
+});
+document.getElementById("optimizeFieldRoute").addEventListener("click",optimizeActiveFieldRoute);
 document.getElementById("newFieldRoute").addEventListener("click",()=>{
   const suggested=`Field Route ${fieldRouteNames().length+1}`;
   const name=prompt("Name this field route:",suggested);
   if(!name?.trim()) return;
   const clean=name.trim();
   if(state.fieldRoutes[clean]) return alert("That field route already exists.");
+  const previous=state.fieldRoutes[state.activeFieldRoute];
+  if(previous){
+    previous.locked=true;
+    previous.updated=new Date().toISOString();
+  }
   ensureFieldRoute(clean);
   state.activeFieldRoute=clean;
   persist();
@@ -2687,7 +2837,7 @@ document.getElementById("fieldRouteList").addEventListener("drop",e=>{
   const targetRoute=stop?.dataset.fieldRoute || drop?.dataset.fieldRouteDrop;
   if(!pid || !targetRoute || !state.fieldRoutes[targetRoute]) return;
   if(!stop){
-    moveFieldParcel(pid,targetRoute,null);
+    if(!moveFieldParcel(pid,targetRoute,null)) return;
     persist();
     renderFieldRoutes();
     return;
@@ -2698,7 +2848,7 @@ document.getElementById("fieldRouteList").addEventListener("drop",e=>{
   const rect=stop.getBoundingClientRect();
   if(e.clientY>rect.top+rect.height/2) insertIndex+=1;
   if(oldIndex>=0 && oldIndex<insertIndex) insertIndex-=1;
-  moveFieldParcel(pid,targetRoute,insertIndex);
+  if(!moveFieldParcel(pid,targetRoute,insertIndex)) return;
   document.querySelectorAll(".field-stop.is-drop-target,.field-route-drop.is-drop-target").forEach(node=>node.classList.remove("is-drop-target"));
   persist();
   renderFieldRoutes();

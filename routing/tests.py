@@ -288,6 +288,14 @@ class PreinspectionWorkspaceTests(TestCase):
         self.assertIn('data-field-pid', template)
         self.assertIn('data-field-route-drop', template)
         self.assertIn('const targetRoute=stop?.dataset.fieldRoute || drop?.dataset.fieldRouteDrop;', template)
+        self.assertIn('id="optimizeFieldRoute"', template)
+        self.assertIn('function optimizeFieldParcelIds(parcels)', template)
+        self.assertIn('route.orderStrategy="appraisal route → street → street number → distance"', template)
+        self.assertIn('function fieldRouteIsOpen(name)', template)
+        self.assertIn('if(!routeName) routeName=ensureFieldRoute(nextFieldRouteName());', template)
+        self.assertIn('id="toggleFieldRouteLock"', template)
+        self.assertNotIn('fieldRouteDefaultLimit', template)
+        self.assertNotIn('maxStops', template)
 
     def test_field_route_map_renders_only_selected_route_and_legacy_yes_parcels_seed(self):
         template = (Path(__file__).parent / "templates" / "routing" / "preinspection_workspace.html").read_text(encoding="utf-8")
@@ -372,6 +380,27 @@ class WorkspaceApiTests(TestCase):
         loaded = client.get(f"/routing/api/workspaces/{workspace_id}/")
         self.assertEqual(loaded.status_code, 200)
         self.assertEqual(loaded.json()["state"]["fieldRoutes"]["Field Route 1"]["parcels"], ["P123"])
+
+    def test_user_backup_contains_all_owned_workspaces_and_revision_history(self):
+        client = Client()
+        self.assertTrue(client.login(username="alice", password="test-password"))
+        created = client.post("/routing/api/workspaces/", data={"name": "Backup me", "state": self.state}, content_type="application/json")
+        self.assertEqual(created.status_code, 201)
+        other = Client()
+        self.assertTrue(other.login(username="bob", password="test-password"))
+        other.post("/routing/api/workspaces/", data={"name": "Bob private", "state": self.state}, content_type="application/json")
+
+        response = client.get("/routing/api/workspaces/backup/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment; filename=\"field-operations-backup-", response["Content-Disposition"])
+        payload = json.loads(response.content)
+        self.assertEqual(payload["user"], "alice")
+        self.assertEqual([item["name"] for item in payload["workspaces"]], ["Backup me"])
+        self.assertEqual(payload["workspaces"][0]["revisions"][0]["state"]["assignment"], [{"PARCELID": "P123"}])
+
+    def test_user_backup_requires_authentication(self):
+        response = Client().get("/routing/api/workspaces/backup/")
+        self.assertEqual(response.status_code, 401)
 
     def test_logout_uses_post_and_redirects_to_login(self):
         client = Client()
